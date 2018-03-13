@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.8)
+project(sea-server)
+set(Boost_USE_STATIC_LIBS ON)
+FIND_PACKAGE( Boost 1.66 COMPONENTS system date_time regex REQUIRED )
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+if (MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE)
+endif ()
+ADD_EXECUTABLE( sea-server sea-server.cpp )
+TARGET_LINK_LIBRARIES( sea-server LINK_PUBLIC ${Boost_LIBRARIES} )
+
