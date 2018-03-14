@@ -48,7 +48,7 @@ void udp_server::start_receive() {
                                            boost::asio::placeholders::bytes_transferred));
 }
 
-void udp_server::handle_send(boost::asio::const_buffer, const boost::system::error_code & error, std::size_t bytes_transferred) {
+void udp_server::handle_send(const boost::system::error_code & error, std::size_t bytes_transferred) {
     if (error) {
         std::cerr << error << std::endl;
     } else {
@@ -83,13 +83,12 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             }
         }
         //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
-        boost::asio::const_buffer send_buf(reply.get(), sizeof(LWPTTLFULLSTATE));
         
-        socket_.async_send_to(send_buf,
+        
+        socket_.async_send_to(boost::asio::buffer(reply.get(), sizeof(LWPTTLFULLSTATE)),
                               remote_endpoint_,
                               boost::bind(&udp_server::handle_send,
                                           this,
-                                          send_buf,
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
 

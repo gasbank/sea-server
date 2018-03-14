@@ -21,8 +21,7 @@ namespace ss {
         void handle_receive(const boost::system::error_code& error,
                             std::size_t bytes_transferred);
 
-        void handle_send(boost::asio::const_buffer /*message*/,
-                         const boost::system::error_code& error,
+        void handle_send(const boost::system::error_code& error,
                          std::size_t bytes_transferred);
 
         udp::socket socket_;
