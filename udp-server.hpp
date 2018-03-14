@@ -9,7 +9,7 @@ namespace ss {
     class udp_server {
 
     public:
-        udp_server(boost::asio::io_context& io_context, std::shared_ptr<sea> sea);
+        udp_server(boost::asio::io_service& io_service, std::shared_ptr<sea> sea);
 
     private:
         void update();

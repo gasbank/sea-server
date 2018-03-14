@@ -25,9 +25,9 @@ static std::string make_daytime_string() {
     return ctime(&now);
 }
 
-udp_server::udp_server(boost::asio::io_context & io_context, std::shared_ptr<sea> sea)
-    : socket_(io_context, udp::endpoint(udp::v4(), 3100)),
-    timer_(io_context, boost::posix_time::seconds(1)),
+udp_server::udp_server(boost::asio::io_service & io_service, std::shared_ptr<sea> sea)
+    : socket_(io_service, udp::endpoint(udp::v4(), 3100)),
+    timer_(io_service, boost::posix_time::seconds(1)),
     sea_(sea) {
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
