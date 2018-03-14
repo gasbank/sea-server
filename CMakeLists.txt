@@ -12,7 +12,9 @@ if (MSVC)
 	# /WX: treat warning as error
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4819 /WX")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4819 /WX")
-endif ()
+else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
 
 MACRO(ADD_MSVC_PRECOMPILED_HEADER PrecompiledHeader PrecompiledSource SourcesVar)
   IF(MSVC)
