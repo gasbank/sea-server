@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.5)
 project(sea-server)
 set(Boost_USE_STATIC_LIBS ON)
 FIND_PACKAGE( Boost 1.66 COMPONENTS system date_time regex REQUIRED )
