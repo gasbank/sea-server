@@ -9,9 +9,9 @@ int main() {
     try {
         std::cout << "sea-server v0.1" << std::endl;
         boost::asio::io_service io_service;
-        std::shared_ptr<sea> sea(new sea());
-        sea->populate_test();
-        udp_server udp_server(io_service, sea);
+        std::shared_ptr<sea> sea_instance(new sea());
+        sea_instance->populate_test();
+        udp_server udp_server(io_service, sea_instance);
         tcp_server tcp_server(io_service);
         io_service.run();
     } catch (std::exception& e) {
