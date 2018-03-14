@@ -33,6 +33,11 @@ MACRO(ADD_MSVC_PRECOMPILED_HEADER PrecompiledHeader PrecompiledSource SourcesVar
   ENDIF(MSVC)
 ENDMACRO(ADD_MSVC_PRECOMPILED_HEADER)
 
+# lz4
+
+add_subdirectory(lz4/contrib/cmake_unofficial)
+include_directories("lz4/lib")
+
 SET(ServerSources
 sea-server.cpp
 udp-server.cpp
@@ -49,4 +54,4 @@ sea-object.hpp)
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE( sea-server ${ServerSources})
 
-TARGET_LINK_LIBRARIES( sea-server LINK_PUBLIC ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES( sea-server LINK_PUBLIC ${Boost_LIBRARIES} lz4_static )

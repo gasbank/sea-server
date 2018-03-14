@@ -1,7 +1,7 @@
 #include "precompiled.hpp"
 #include "udp-server.hpp"
 #include "sea.hpp"
-
+#include "lz4.h"
 using namespace ss;
 
 typedef struct _LWPTTLFULLSTATEOBJECT {
@@ -83,9 +83,11 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             }
         }
         //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
+        char compressed[1500];
+        int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), boost::size(compressed));
         
         
-        socket_.async_send_to(boost::asio::buffer(reply.get(), sizeof(LWPTTLFULLSTATE)),
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
                               boost::bind(&udp_server::handle_send,
                                           this,

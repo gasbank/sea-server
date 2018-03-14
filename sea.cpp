@@ -5,12 +5,12 @@ using namespace ss;
 
 void sea::populate_test() {
     boost::random::mt19937 rng;
-    boost::random::uniform_real_distribution<float> random_point(-10000, 10000);
-    for (int i = 0; i < 400000; i++) {
+    boost::random::uniform_real_distribution<float> random_point(-2500, 2500);
+    for (int i = 0; i < 25000; i++) {
         float x = random_point(rng);
         float y = random_point(rng);
         spawn(i + 1, x, y, 1, 1);
-        if ((i + 1) % 40000 == 0) {
+        if ((i + 1) % 5000 == 0) {
             std::cout << "Spawning " << (i + 1) << "..." << std::endl;
         }
     }
