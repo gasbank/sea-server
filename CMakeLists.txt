@@ -42,6 +42,8 @@ SET(ServerSources
 sea-server.cpp
 udp-server.cpp
 udp-server.hpp
+udp-admin-server.cpp
+udp-admin-server.hpp
 tcp-server.cpp
 tcp-server.hpp
 tcp-connection.cpp

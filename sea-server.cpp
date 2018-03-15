@@ -2,6 +2,7 @@
 #include "udp-server.hpp"
 #include "tcp-server.hpp"
 #include "sea.hpp"
+#include "udp-admin-server.hpp"
 
 using namespace ss;
 
@@ -13,6 +14,7 @@ int main() {
         sea_instance->populate_test();
         udp_server udp_server(io_service, sea_instance);
         tcp_server tcp_server(io_service);
+        udp_admin_server udp_admin_server(io_service, sea_instance);
         io_service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

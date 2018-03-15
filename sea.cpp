@@ -19,12 +19,49 @@ void sea::populate_test() {
     query_near_to_packet(0, 0, 10, sop_list);
 }
 
+int sea::spawn(const char* guid, int type, float x, float y, float w, float h) {
+    auto it = sea_guid_to_id.find(guid);
+    if (it != sea_guid_to_id.end()) {
+        int id = it->second;
+        auto it2 = sea_objects.find(id);
+        if (it2 != sea_objects.end()) {
+            return id;
+        } else {
+            std::cerr << boost::format("Spawn: Orphan entry found in sea_guid_to_id. (guid=%1%) Removing and respawn...") % guid;
+            sea_guid_to_id.erase(it);
+            return spawn(guid, type, x, y, w, h);
+        }
+    } else {
+        int id = spawn(type, x, y, w, h);
+        sea_objects.find(id)->second.set_guid(guid);
+        sea_guid_to_id[guid] = id;
+        return id;
+    }
+}
+
 int sea::spawn(int type, float x, float y, float w, float h) {
     int id = sea_objects.size() + 1;
-    sea_objects.emplace(std::pair<int, sea_object>(id, sea_object(id, type, x, y, w, h)));
     box b(point(x, y), point(x + w, y + h));
-    rtree.insert(std::make_pair(b, id));
+    auto rtree_value = std::make_pair(b, id);
+    sea_objects.emplace(std::pair<int, sea_object>(id, sea_object(id, type, x, y, w, h, rtree_value)));
+    rtree.insert(rtree_value);
     return id;
+}
+
+void sea::teleport_to(const char* guid, float x, float y) {
+    auto it = sea_guid_to_id.find(guid);
+    if (it != sea_guid_to_id.end()) {
+        auto it2 = sea_objects.find(it->second);
+        if (it2 != sea_objects.end()) {
+            rtree.remove(it2->second.get_rtree_value());
+            it2->second.set_xy(x, y);
+            rtree.insert(it2->second.get_rtree_value());
+        } else {
+            std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
+        }
+    } else {
+        std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
+    }
 }
 
 void sea::query_near_to_packet(float xc, float yc, float ex, std::vector<sea_object_public>& sop_list) {
