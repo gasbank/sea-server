@@ -7,6 +7,7 @@ using namespace ss;
 typedef struct _LWPTTLFULLSTATEOBJECT {
     float x0, y0;
     float x1, y1;
+    float vx, vy;
     int id;
 } LWPTTLFULLSTATEOBJECT;
 
@@ -16,7 +17,7 @@ typedef struct _LWPTTLFULLSTATE {
     unsigned char padding1;
     unsigned char padding2;
     int count;
-    LWPTTLFULLSTATEOBJECT obj[64];
+    LWPTTLFULLSTATEOBJECT obj[32];
 } LWPTTLFULLSTATE;
 
 static std::string make_daytime_string() {
@@ -25,9 +26,11 @@ static std::string make_daytime_string() {
     return ctime(&now);
 }
 
+const auto update_interval = boost::posix_time::seconds(1);
+
 udp_server::udp_server(boost::asio::io_service & io_service, std::shared_ptr<sea> sea)
     : socket_(io_service, udp::endpoint(udp::v4(), 3100)),
-    timer_(io_service, boost::posix_time::seconds(1)),
+    timer_(io_service, update_interval),
     sea_(sea) {
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
@@ -35,7 +38,8 @@ udp_server::udp_server(boost::asio::io_service & io_service, std::shared_ptr<sea
 
 void udp_server::update() {
     //std::cout << "update..." << std::endl;
-    timer_.expires_at(timer_.expires_at() + boost::posix_time::seconds(1));
+    sea_->update(update_interval.total_milliseconds() / 1000.0f);
+    timer_.expires_at(timer_.expires_at() + update_interval);
     timer_.async_wait(boost::bind(&udp_server::update, this));
 }
 
@@ -76,6 +80,8 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             reply->obj[reply_obj_index].y0 = v.y;
             reply->obj[reply_obj_index].x1 = v.x + v.w;
             reply->obj[reply_obj_index].y1 = v.y + v.h;
+            reply->obj[reply_obj_index].vx = v.vx;
+            reply->obj[reply_obj_index].vy = v.vy;
             reply->obj[reply_obj_index].id = v.id;
             reply_obj_index++;
             if (reply_obj_index >= boost::size(reply->obj)) {

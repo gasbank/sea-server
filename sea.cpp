@@ -48,6 +48,32 @@ int sea::spawn(int type, float x, float y, float w, float h) {
     return id;
 }
 
+void sea::travel_to(const char* guid, float x, float y) {
+    auto it = sea_guid_to_id.find(guid);
+    if (it != sea_guid_to_id.end()) {
+        auto it2 = sea_objects.find(it->second);
+        if (it2 != sea_objects.end()) {
+            rtree.remove(it2->second.get_rtree_value());
+            float cx = 0, cy = 0; // current position
+            it2->second.get_xy(cx, cy);
+            float dx = x - cx;
+            float dy = y - cy;
+            float dlen = sqrtf(dx * dx + dy * dy);
+            if (dlen > 1e-3) {
+                it2->second.set_velocity(dx / dlen, dy / dlen);
+            } else {
+                it2->second.set_velocity(0, 0);
+            }
+            it2->second.set_destination(x, y);
+            rtree.insert(it2->second.get_rtree_value());
+        } else {
+            std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
+        }
+    } else {
+        std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
+    }
+}
+
 void sea::teleport_to(const char* guid, float x, float y) {
     auto it = sea_guid_to_id.find(guid);
     if (it != sea_guid_to_id.end()) {
@@ -55,6 +81,23 @@ void sea::teleport_to(const char* guid, float x, float y) {
         if (it2 != sea_objects.end()) {
             rtree.remove(it2->second.get_rtree_value());
             it2->second.set_xy(x, y);
+            it2->second.set_velocity(0, 0);
+            rtree.insert(it2->second.get_rtree_value());
+        } else {
+            std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
+        }
+    } else {
+        std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
+    }
+}
+
+void sea::teleport_by(const char* guid, float dx, float dy) {
+    auto it = sea_guid_to_id.find(guid);
+    if (it != sea_guid_to_id.end()) {
+        auto it2 = sea_objects.find(it->second);
+        if (it2 != sea_objects.end()) {
+            rtree.remove(it2->second.get_rtree_value());
+            it2->second.translate_xy(dx, dy);
             rtree.insert(it2->second.get_rtree_value());
         } else {
             std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
@@ -86,4 +129,21 @@ std::vector<int> sea::query_tree(float xc, float yc, float ex) const {
         id_list.push_back(v.second);
     }
     return id_list;
+}
+
+void sea::update(float delta_time) {
+    BOOST_FOREACH(const auto& it, sea_guid_to_id) {
+        const auto& it2 = sea_objects.find(it.second);
+        if (it2 != sea_objects.cend()) {
+            float vx = 0, vy = 0;
+            it2->second.get_velocity(vx, vy);
+            if (vx || vy) {
+                if (it2->second.get_distance_to_destination() > 1.0f) {
+                    teleport_by(it.first.c_str(), vx * delta_time, vy * delta_time);
+                } else {
+                    it2->second.set_velocity(0, 0);
+                }
+            }
+        }
+    }
 }
