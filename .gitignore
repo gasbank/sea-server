@@ -1,2 +1,4 @@
 /build
 cmake-build-debug
+/rtree/worldmap_static.dat
+/rtree/seaport.dat
