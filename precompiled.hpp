@@ -17,3 +17,7 @@
 #include <boost/random.hpp>
 #include <boost/range.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
+#include <boost/interprocess/file_mapping.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <boost/filesystem.hpp>

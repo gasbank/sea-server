@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(sea-server)
 set(Boost_USE_STATIC_LIBS ON)
-FIND_PACKAGE( Boost 1.58 COMPONENTS system date_time regex REQUIRED )
+FIND_PACKAGE( Boost 1.58 COMPONENTS system date_time regex filesystem REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 if (MSVC)
     add_definitions(-D_WIN32_WINNT=0x0501 -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE)
@@ -51,7 +51,16 @@ tcp-connection.hpp
 sea.cpp
 sea.hpp
 sea-object.cpp
-sea-object.hpp)
+sea-object.hpp
+sea_static.cpp
+sea_static.hpp
+sea_static_object.cpp
+sea_static_object.hpp
+seaport_object.cpp
+seaport_object.hpp
+seaport.cpp
+seaport.hpp
+)
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE( sea-server ${ServerSources})
