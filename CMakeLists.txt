@@ -38,6 +38,9 @@ ENDMACRO(ADD_MSVC_PRECOMPILED_HEADER)
 add_subdirectory(lz4/contrib/cmake_unofficial)
 include_directories("lz4/lib")
 
+# pthread deps on Linux server build
+find_package(Threads)
+
 SET(ServerSources
 sea-server.cpp
 udp-server.cpp
@@ -65,4 +68,4 @@ seaport.hpp
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE( sea-server ${ServerSources})
 
-TARGET_LINK_LIBRARIES( sea-server LINK_PUBLIC ${Boost_LIBRARIES} lz4_static )
+TARGET_LINK_LIBRARIES( sea-server LINK_PUBLIC ${Boost_LIBRARIES} lz4_static ${CMAKE_THREAD_LIBS_INIT} )
