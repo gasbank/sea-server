@@ -43,6 +43,31 @@ std::vector<sea_static_object_public::value_t> sea_static::query_tree(short xc, 
     return result_s;
 }
 
+void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const char* dump_filename) {
+    if (rtree_ptr->size() == 0) {
+        int rect_count = 0;
+        FILE* fin = fopen(dump_filename, "rb");
+        if (fin) {
+            size_t read_max_count = 100000; // elements
+            void* read_buf = malloc(sizeof(xyxy) * read_max_count);
+            fseek(fin, 0, SEEK_SET);
+            while (size_t read_count = fread(read_buf, sizeof(xyxy), read_max_count, fin)) {
+                for (size_t i = 0; i < read_count; i++) {
+                    rect_count++;
+                    xyxy* r = reinterpret_cast<xyxy*>(read_buf) + i;
+                    sea_static_object_public::box_t box(sea_static_object_public::point_t(r->xy0.x, r->xy0.y), sea_static_object_public::point_t(r->xy1.x, r->xy1.y));
+                    rtree_ptr->insert(std::make_pair(box, rect_count));
+                }
+            }
+            fclose(fin);
+            printf("Max rect R Tree size (after loaded from %s): %zu\n", dump_filename, rtree_ptr->size());
+        }
+        else {
+            printf("Dump file %s not exist.\n", dump_filename);
+        }
+    }
+}
+
 sea_static::sea_static()
     : land_file(bi::open_or_create, DATA_ROOT WORLDMAP_LAND_MAX_RECT_RTREE_RTREE_FILENAME, WORLDMAP_LAND_MAX_RECT_RTREE_MMAP_MAX_SIZE)
     , land_alloc(land_file.get_segment_manager())
@@ -53,6 +78,9 @@ sea_static::sea_static()
     , res_width(1 << 14) // 16384
     , res_height(1 << 13) // 8192
     , km_per_cell(40075.0f / res_width) {
+
+    load_from_dump_if_empty(land_rtree_ptr, "rtree/land_raw_xyxy.bin");
+    load_from_dump_if_empty(water_rtree_ptr, "rtree/water_raw_xyxy.bin");
 
     xy from = { 14065, 2496 };
     xy to = { 14043, 2512 };

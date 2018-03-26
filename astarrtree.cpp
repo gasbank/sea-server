@@ -255,17 +255,18 @@ std::vector<xy> calculate_pixel_waypoints(xy from, xy to, ASPath cell_path) {
     return waypoints;
 }
 
-void astarrtree::astar_rtree(const char* output, size_t output_max_size, xy from, xy to) {
-    float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
-    std::cout << boost::format("%6%: Pathfinding from (%1%,%2%) -> (%3%,%4%) [distance = %5%]\n")
-        % from.x % from.y % to.x % to.y % distance % output;
-    bi::managed_mapped_file file(bi::open_or_create, output, output_max_size);
+void astarrtree::astar_rtree(const char* rtree_filename, size_t output_max_size, xy from, xy to) {
+    bi::managed_mapped_file file(bi::open_or_create, rtree_filename, output_max_size);
     allocator_t alloc(file.get_segment_manager());
     rtree_t* rtree_ptr = file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), alloc);
     astar_rtree_memory(rtree_ptr, from, to);
 }
 
 std::vector<xy> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy from, xy to) {
+    float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
+    std::cout << boost::format("Pathfinding from (%1%,%2%) -> (%3%,%4%) [distance = %5%]\n")
+        % from.x % from.y % to.x % to.y % distance;
+
     std::vector<xy> waypoints;
     printf("R Tree size: %zu\n", rtree_ptr->size());
     if (rtree_ptr->size() == 0) {
