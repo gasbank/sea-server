@@ -63,9 +63,12 @@ seaport_object.cpp
 seaport_object.hpp
 seaport.cpp
 seaport.hpp
+astarrtree.cpp
+astarrtree.hpp
+xy.hpp
 )
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
-ADD_EXECUTABLE( sea-server ${ServerSources})
+ADD_EXECUTABLE( sea-server ${ServerSources} AStar.c AStar.h)
 
 TARGET_LINK_LIBRARIES( sea-server LINK_PUBLIC ${Boost_LIBRARIES} lz4_static ${CMAKE_THREAD_LIBS_INIT} )

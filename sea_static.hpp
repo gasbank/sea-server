@@ -13,9 +13,12 @@ namespace ss {
         std::vector<sea_static_object_public::value_t> query_tree(short xc, short yc, short halfex) const;
         short lng_to_xc(float lng) const;
         short lat_to_yc(float lat) const;
-        bi::managed_mapped_file file;
-        sea_static_object_public::allocator_t alloc;
-        sea_static_object_public::rtree_t* rtree_ptr;
+        bi::managed_mapped_file land_file;
+        sea_static_object_public::allocator_t land_alloc;
+        sea_static_object_public::rtree_t* land_rtree_ptr;
+        bi::managed_mapped_file water_file;
+        sea_static_object_public::allocator_t water_alloc;
+        sea_static_object_public::rtree_t* water_rtree_ptr;
         const short res_width;
         const short res_height;
         const float km_per_cell;

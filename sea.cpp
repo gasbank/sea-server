@@ -1,5 +1,6 @@
 #include "precompiled.hpp"
 #include "sea.hpp"
+//#include "floatingmod.hpp"
 
 using namespace ss;
 
@@ -14,6 +15,8 @@ void sea::populate_test() {
             std::cout << "Spawning " << (i + 1) << "..." << std::endl;
         }
     }
+    spawn("Test A", 1, 129.393311f, 35.4739418f, 1, 1);
+    travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
     std::cout << "Spawning finished." << std::endl;
     std::vector<sea_object_public> sop_list;
     query_near_to_packet(0, 0, 10, sop_list);
@@ -48,7 +51,7 @@ int sea::spawn(int type, float x, float y, float w, float h) {
     return id;
 }
 
-void sea::travel_to(const char* guid, float x, float y) {
+void sea::travel_to(const char* guid, float x, float y, float v) {
     auto it = sea_guid_to_id.find(guid);
     if (it != sea_guid_to_id.end()) {
         auto it2 = sea_objects.find(it->second);
@@ -60,7 +63,7 @@ void sea::travel_to(const char* guid, float x, float y) {
             float dy = y - cy;
             float dlen = sqrtf(dx * dx + dy * dy);
             if (dlen > 1e-3) {
-                it2->second.set_velocity(dx / dlen, dy / dlen);
+                it2->second.set_velocity(dx / dlen * v, dy / dlen * v);
             } else {
                 it2->second.set_velocity(0, 0);
             }
@@ -138,7 +141,7 @@ void sea::update(float delta_time) {
             float vx = 0, vy = 0;
             it2->second.get_velocity(vx, vy);
             if (vx || vy) {
-                if (it2->second.get_distance_to_destination() > 1.0f) {
+                if (it2->second.get_distance_to_destination() > 0.001f) {
                     teleport_by(it.first.c_str(), vx * delta_time, vy * delta_time);
                 } else {
                     it2->second.set_velocity(0, 0);
