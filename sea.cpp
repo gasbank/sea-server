@@ -1,13 +1,26 @@
 #include "precompiled.hpp"
 #include "sea.hpp"
 //#include "floatingmod.hpp"
-
 using namespace ss;
+
+sea::sea()
+    : res_width(1 << 14) // 16384
+    , res_height(1 << 13) // 8192
+    , km_per_cell(40075.0f / res_width) {
+}
+
+float sea::lng_to_xc(float lng) const {
+    return res_width / 2.0f + lng / 180.0f * res_width / 2.0f;
+}
+
+float sea::lat_to_yc(float lat) const {
+    return res_height / 2.0f - lat / 90.0f * res_height / 2.0f;
+}
 
 void sea::populate_test() {
     boost::random::mt19937 rng;
     boost::random::uniform_real_distribution<float> random_point(-2500, 2500);
-    for (int i = 0; i < 25000; i++) {
+    for (int i = 0; i < 0; i++) {
         float x = random_point(rng);
         float y = random_point(rng);
         spawn(i + 1, x, y, 1, 1);
@@ -16,7 +29,7 @@ void sea::populate_test() {
         }
     }
     spawn("Test A", 1, 129.393311f, 35.4739418f, 1, 1);
-    travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
+    //travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
     std::cout << "Spawning finished." << std::endl;
     std::vector<sea_object_public> sop_list;
     query_near_to_packet(0, 0, 10, sop_list);
@@ -110,7 +123,11 @@ void sea::teleport_by(const char* guid, float dx, float dy) {
     }
 }
 
-void sea::query_near_to_packet(float xc, float yc, float ex, std::vector<sea_object_public>& sop_list) {
+void sea::query_near_lng_lat_to_packet(float lng, float lat, short halfex, std::vector<sea_object_public>& sop_list) const {
+    query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), halfex * 2.0f, sop_list);
+}
+
+void sea::query_near_to_packet(float xc, float yc, float ex, std::vector<sea_object_public>& sop_list) const {
     auto id_list = query_tree(xc, yc, ex);
     sop_list.resize(id_list.size());
     std::size_t i = 0;

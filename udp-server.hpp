@@ -7,12 +7,13 @@ namespace ss {
     class sea;
     class sea_static;
     class seaport;
+    class route;
 
     class udp_server {
 
     public:
         udp_server(boost::asio::io_service& io_service,
-                   std::shared_ptr<sea> sea, 
+                   std::shared_ptr<sea> sea,
                    std::shared_ptr<sea_static> sea_static,
                    std::shared_ptr<seaport> seaport);
 
@@ -39,5 +40,6 @@ namespace ss {
         std::shared_ptr<sea> sea_;
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
+        std::shared_ptr<route> route_;
     };
 }

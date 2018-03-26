@@ -84,5 +84,9 @@ sea_static::sea_static()
 
     xy from = { 14065, 2496 };
     xy to = { 14043, 2512 };
-    auto waypoints = astarrtree::astar_rtree_memory(water_rtree_ptr, from, to);
+    astarrtree::astar_rtree_memory(water_rtree_ptr, from, to);
+}
+
+std::vector<xy> ss::sea_static::calculate_waypoints(const xy & from, const xy & to) const {
+    return astarrtree::astar_rtree_memory(water_rtree_ptr, from, to);
 }

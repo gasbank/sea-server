@@ -29,8 +29,8 @@ namespace ss {
         {
         }
         void fill_sop(sea_object_public& sop) const {
-            sop.x = x;
-            sop.y = y;
+            sop.x = x + 0.5f;
+            sop.y = y + 0.5f;
             sop.w = w;
             sop.h = h;
             sop.vx = vx;

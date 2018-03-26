@@ -4,6 +4,9 @@
 #include "sea_static.hpp"
 #include "seaport.hpp"
 #include "lz4.h"
+#include "route.hpp"
+#include "xy.hpp"
+
 using namespace ss;
 
 typedef struct _LWPTTLFULLSTATEOBJECT {
@@ -60,6 +63,7 @@ static std::string make_daytime_string() {
 }
 
 const auto update_interval = boost::posix_time::seconds(1);
+//const auto update_interval = boost::posix_time::milliseconds(250);
 
 udp_server::udp_server(boost::asio::io_service & io_service,
                        std::shared_ptr<sea> sea,
@@ -71,6 +75,11 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , sea_static_(sea_static)
     , seaport_(seaport)
 {
+    //auto wp = sea_static_->calculate_waypoints(xy{ 14083,2476 }, xy{ 14079,2480 });
+    auto wp = sea_static_->calculate_waypoints(xy{ 14083,2476 }, xy{ 13952,2517 });
+    route_.reset(new route(wp));
+    route_->set_velocity(1);
+
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
 }
@@ -80,6 +89,9 @@ void udp_server::update() {
     sea_->update(update_interval.total_milliseconds() / 1000.0f);
     timer_.expires_at(timer_.expires_at() + update_interval);
     timer_.async_wait(boost::bind(&udp_server::update, this));
+    route_->update(1);
+    auto pos = route_->get_pos();
+    sea_->teleport_to("Test A", pos.first, pos.second);
 }
 
 void udp_server::start_receive() {
@@ -101,7 +113,7 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
 
 void udp_server::send_full_state(float xc, float yc, float ex) {
     std::vector<sea_object_public> sop_list;
-    sea_->query_near_to_packet(xc, yc, ex, sop_list);
+    sea_->query_near_lng_lat_to_packet(xc, yc, static_cast<short>(ex / 2), sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));

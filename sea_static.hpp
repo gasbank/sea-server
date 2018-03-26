@@ -2,12 +2,15 @@
 
 #include "sea_static_object.hpp"
 
+struct xy;
+
 namespace ss {
     class sea_static {
     public:
         std::vector<sea_static_object_public> query_near_lng_lat_to_packet(float lng, float lat, short halfex) const;
         
         sea_static();
+        std::vector<xy> calculate_waypoints(const xy& from, const xy& to) const;
     private:
         std::vector<sea_static_object_public> query_near_to_packet(short xc, short yc, short halfex) const; 
         std::vector<sea_static_object_public::value_t> query_tree(short xc, short yc, short halfex) const;

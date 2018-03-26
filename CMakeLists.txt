@@ -66,7 +66,8 @@ seaport.hpp
 astarrtree.cpp
 astarrtree.hpp
 xy.hpp
-)
+route.hpp
+route.cpp)
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE( sea-server ${ServerSources} AStar.c AStar.h)
