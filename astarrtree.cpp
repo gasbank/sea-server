@@ -343,7 +343,7 @@ std::vector<xy> calculate_pixel_waypoints(xy from, xy to, ASPath cell_path) {
         {
             for (size_t i = 0; i < pixel_path_count; i++) {
                 xyib* pixel_node = reinterpret_cast<xyib*>(ASPathGetNode(pixel_path, i));
-                printf("Pixel Path %zu: (%d, %d) [Cell index=%d]\n",
+                printf("Pixel Path %zu: (%d, %d) [Cell index=%zu]\n",
                        i,
                        pixel_node->p.x,
                        pixel_node->p.y,
@@ -430,7 +430,11 @@ bool find_nearest_point_if_empty(rtree_t* rtree_ptr, xy& from, box_t& from_box, 
 std::vector<xy> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy from, xy to) {
     float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
     std::cout << boost::format("Pathfinding from (%1%,%2%) -> (%3%,%4%) [distance = %5%]\n")
-        % from.x % from.y % to.x % to.y % distance;
+        % static_cast<int>(from.x)
+        % static_cast<int>(from.y)
+        % static_cast<int>(to.x)
+        % static_cast<int>(to.y)
+        % distance;
 
     std::vector<xy> waypoints;
     printf("R Tree size: %zu\n", rtree_ptr->size());
@@ -442,14 +446,14 @@ std::vector<xy> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy from, xy t
     std::vector<value_t> from_result_s;
     rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
     if (find_nearest_point_if_empty(rtree_ptr, from, from_box, from_result_s)) {
-        std::cout << boost::format("  'From' point changed to (%1%,%2%)\n") % from.x % from.y;
+        std::cout << boost::format("  'From' point changed to (%1%,%2%)\n") % static_cast<int>(from.x) % static_cast<int>(from.y);
     }
 
     auto to_box = box_t_from_xy(to);
     std::vector<value_t> to_result_s;
     rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
     if (find_nearest_point_if_empty(rtree_ptr, to, to_box, to_result_s)) {
-        std::cout << boost::format("  'To' point changed to (%1%,%2%)\n") % to.x % to.y;
+        std::cout << boost::format("  'To' point changed to (%1%,%2%)\n") % static_cast<int>(to.x) % static_cast<int>(to.y);
     }
 
     if (from_result_s.size() == 1 && to_result_s.size() == 1) {
