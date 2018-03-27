@@ -238,7 +238,7 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
         auto wp = sea_static_->calculate_waypoints(point_list[i], point_list[i + 1]);
         std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
     }
-    std::shared_ptr<route> route(new route(wp_total));
-    route->set_velocity(1);
-    return route;
+    std::shared_ptr<route> r(new route(wp_total));
+    r->set_velocity(1);
+    return r;
 }
