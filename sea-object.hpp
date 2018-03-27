@@ -10,6 +10,7 @@ namespace ss {
         float x, y;
         float w, h;
         float vx, vy;
+        char guid[64];
     };
     class sea_object {
         typedef bg::model::point<float, 2, bg::cs::cartesian> point;
@@ -37,6 +38,7 @@ namespace ss {
             sop.vy = vy;
             sop.id = id;
             sop.type = type;
+            strcpy(sop.guid, guid.c_str());
         }
         void set_guid(const std::string& v) {
             guid = v;

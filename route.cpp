@@ -28,9 +28,10 @@ void route::update(float dt) {
     param += velocity * dt;
 }
 
-route::fxfyvxvy route::get_pos() const {
+route::fxfyvxvy route::get_pos(bool& finished) const {
     auto it = std::lower_bound(accum_distance.begin(), accum_distance.end(), param);
     auto px = 0.0f, py = 0.0f, dx = 0.0f, dy = 0.0f;
+    finished = false;
     if (it == accum_distance.begin()) {
         px = static_cast<float>(waypoints.begin()->x);
         py = static_cast<float>(waypoints.begin()->y);
@@ -41,6 +42,7 @@ route::fxfyvxvy route::get_pos() const {
         py = static_cast<float>(waypoints.rbegin()->y);
         dx = 0;
         dy = 0;
+        finished = true;
     } else {
         auto it_idx = it - accum_distance.begin();
         auto wp1 = waypoints[it_idx - 1];
@@ -54,7 +56,20 @@ route::fxfyvxvy route::get_pos() const {
         dy = static_cast<float>(wp2.y - wp1.y);
         px = wp1.x + dx * r;
         py = wp1.y + dy * r;
-        
     }
     return std::make_pair(std::make_pair(px, py), std::make_pair(dx, dy));
+}
+
+float route::get_left() const {
+    return std::max(0.0f, *accum_distance.rbegin() - param);
+}
+
+void route::reverse() {
+    std::reverse(waypoints.begin(), waypoints.end());
+    auto total_length = *accum_distance.rbegin();
+    for (size_t i = 0; i < accum_distance.size(); i++) {
+        accum_distance[i] = total_length - accum_distance[i];
+    }
+    std::reverse(accum_distance.begin(), accum_distance.end());
+    param = total_length - param;
 }

@@ -21,43 +21,67 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , timer_(io_service, update_interval)
     , sea_(sea)
     , sea_static_(sea_static)
-    , seaport_(seaport)
-{
-    //auto wp = sea_static_->calculate_waypoints(xy{ 14083,2476 }, xy{ 14079,2480 });
-    auto port1 = seaport_->get_seaport_point("Onsan/Ulsan");
-    auto port2 = seaport_->get_seaport_point("Busan");
-    auto port3 = seaport_->get_seaport_point("BusanNewPort");
-    auto port4 = seaport_->get_seaport_point("Anjeong");
-    auto port5 = seaport_->get_seaport_point("Tongyeong");
-    auto wp1 = sea_static_->calculate_waypoints(port1, port2);
-    auto wp2 = sea_static_->calculate_waypoints(port2, port3);
-    auto wp3 = sea_static_->calculate_waypoints(port3, port4);
-    auto wp4 = sea_static_->calculate_waypoints(port4, port5);
-    std::copy(wp2.begin(), wp2.end(), std::back_inserter(wp1));
-    std::copy(wp3.begin(), wp3.end(), std::back_inserter(wp1));
-    std::copy(wp4.begin(), wp4.end(), std::back_inserter(wp1));
-    route_.reset(new route(wp1));
-    route_->set_velocity(1);
+    , seaport_(seaport) {
+    auto id1 = sea_->spawn("Test A", 1, 14080, 2480, 1, 1);
+    auto id2 = sea_->spawn("Test B", 1, 14080, 2480, 1, 1);
+    auto id3 = sea_->spawn("Test C", 1, 14080, 2480, 1, 1);
+    auto id4 = sea_->spawn("Test D", 1, 14080, 2480, 1, 1);
+    auto id5 = sea_->spawn("Test E", 1, 14080, 2480, 1, 1);
+    auto id6 = sea_->spawn("Test F", 1, 14080, 2480, 1, 1);
+    auto id7 = sea_->spawn("Test G", 1, 14080, 2480, 1, 1);
+
+    route_map_[id1] = create_route({
+        "Onsan/Ulsan",
+        "Busan",
+        "BusanNewPort",
+        "Anjeong",
+        "Tongyeong" });
+
+    route_map_[id2] = create_route({
+        "Busan",
+        "SouthBusan" });
+
+    route_map_[id3] = create_route({
+        "Tongyeong",
+        "Samcheonpo/Sacheon" });
+
+    route_map_[id4] = create_route({
+        "Gwangyang",
+        "Yeosu" });
+
+    route_map_[id5] = create_route({
+        "Onsan/Ulsan",
+        "Nokdongsin" });
+
+    route_map_[id6] = create_route({
+        "Onsan/Ulsan",
+        "Yokohama" });
+
+    std::cout << "Route setup completed." << std::endl;
 
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
 }
 
 void udp_server::update() {
-    //std::cout << "update..." << std::endl;
     sea_->update(update_interval.total_milliseconds() / 1000.0f);
     timer_.expires_at(timer_.expires_at() + update_interval);
     timer_.async_wait(boost::bind(&udp_server::update, this));
-    route_->update(1);
-    auto pos = route_->get_pos();
-    auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
-    if (dlen) {
-        sea_->teleport_to("Test A", pos.first.first, pos.first.second, pos.second.first / dlen, pos.second.second / dlen);
-    } else {
-        sea_->teleport_to("Test A", pos.first.first, pos.first.second, 0, 0);
+
+    for (auto v : route_map_) {
+        v.second->update(1);
+        auto finished = false;
+        auto pos = v.second->get_pos(finished);
+        auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
+        if (dlen) {
+            sea_->teleport_to(v.first, pos.first.first, pos.first.second, pos.second.first / dlen, pos.second.second / dlen);
+        } else {
+            sea_->teleport_to(v.first, pos.first.first, pos.first.second, 0, 0);
+        }
+        if (finished) {
+            v.second->reverse();
+        }
     }
-    
-    //sea_->travel_to("Test A", )
 }
 
 void udp_server::start_receive() {
@@ -94,6 +118,14 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
         reply->obj[reply_obj_index].vx = v.vx;
         reply->obj[reply_obj_index].vy = v.vy;
         reply->obj[reply_obj_index].id = v.id;
+        strcpy(reply->obj[reply_obj_index].guid, v.guid);
+        auto it = route_map_.find(v.id);
+        if (it != route_map_.end()) {
+            reply->obj[reply_obj_index].route_left = it->second->get_left();
+        } else {
+            reply->obj[reply_obj_index].route_left = 0;
+        }
+
         reply_obj_index++;
         if (reply_obj_index >= boost::size(reply->obj)) {
             break;
@@ -116,7 +148,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
 
 void udp_server::send_static_state(float xc, float yc, float ex) {
     auto sop_list = sea_static_->query_near_lng_lat_to_packet(xc, yc, static_cast<short>(ex / 2));
-    
+
     boost::shared_ptr<LWPTTLSTATICSTATE> reply(new LWPTTLSTATICSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE));
     reply->type = 111; // LPGP_LWPTTLSTATICSTATE
@@ -191,4 +223,22 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
 
         start_receive();
     }
+}
+
+std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& seaport_list) const {
+    if (seaport_list.size() == 0) {
+        return std::shared_ptr<route>();
+    }
+    std::vector<seaport_object_public::point_t> point_list;
+    for (auto v : seaport_list) {
+        point_list.emplace_back(seaport_->get_seaport_point(v.c_str()));
+    }
+    std::vector<xy> wp_total;
+    for (size_t i = 0; i < point_list.size() - 1; i++) {
+        auto wp = sea_static_->calculate_waypoints(point_list[i], point_list[i + 1]);
+        std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
+    }
+    std::shared_ptr<route> route(new route(wp_total));
+    route->set_velocity(1);
+    return route;
 }

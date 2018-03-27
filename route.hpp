@@ -11,7 +11,9 @@ namespace ss {
         route(const std::vector<xy>& waypoints);
         void set_velocity(float v) { velocity = v; }
         void update(float dt);
-        fxfyvxvy get_pos() const;
+        fxfyvxvy get_pos(bool& finished) const;
+        float get_left() const;
+        void reverse();
     private:
         std::vector<float> accum_distance;
         std::vector<xy> waypoints;

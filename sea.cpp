@@ -28,7 +28,6 @@ void sea::populate_test() {
             std::cout << "Spawning " << (i + 1) << "..." << std::endl;
         }
     }
-    spawn("Test A", 1, 129.393311f, 35.4739418f, 1, 1);
     //travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
     std::cout << "Spawning finished." << std::endl;
     std::vector<sea_object_public> sop_list;
@@ -90,18 +89,22 @@ void sea::travel_to(const char* guid, float x, float y, float v) {
     }
 }
 
+void sea::teleport_to(int id, float x, float y, float vx, float vy) {
+    auto it = sea_objects.find(id);
+    if (it != sea_objects.end()) {
+        rtree.remove(it->second.get_rtree_value());
+        it->second.set_xy(x, y);
+        it->second.set_velocity(vx, vy);
+        rtree.insert(it->second.get_rtree_value());
+    } else {
+        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+    }
+}
+
 void sea::teleport_to(const char* guid, float x, float y, float vx, float vy) {
     auto it = sea_guid_to_id.find(guid);
     if (it != sea_guid_to_id.end()) {
-        auto it2 = sea_objects.find(it->second);
-        if (it2 != sea_objects.end()) {
-            rtree.remove(it2->second.get_rtree_value());
-            it2->second.set_xy(x, y);
-            it2->second.set_velocity(vx, vy);
-            rtree.insert(it2->second.get_rtree_value());
-        } else {
-            std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
-        }
+        teleport_to(it->second, x, y, vx, vy);
     } else {
         std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
     }

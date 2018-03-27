@@ -33,6 +33,8 @@ namespace ss {
         void handle_send(const boost::system::error_code& error,
                          std::size_t bytes_transferred);
 
+        std::shared_ptr<route> create_route(const std::vector<std::string>& seaport_list) const;
+
         udp::socket socket_;
         udp::endpoint remote_endpoint_;
         boost::array<char, 1024> recv_buffer_;
@@ -40,6 +42,6 @@ namespace ss {
         std::shared_ptr<sea> sea_;
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
-        std::shared_ptr<route> route_;
+        std::unordered_map<int, std::shared_ptr<route> > route_map_;
     };
 }
