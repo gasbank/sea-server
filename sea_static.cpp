@@ -90,3 +90,13 @@ sea_static::sea_static()
 std::vector<xy> ss::sea_static::calculate_waypoints(const xy & from, const xy & to) const {
     return astarrtree::astar_rtree_memory(water_rtree_ptr, from, to);
 }
+
+std::vector<xy> ss::sea_static::calculate_waypoints(const sea_static_object_public::point_t & from, const sea_static_object_public::point_t & to) const {
+    xy fromxy;
+    xy toxy;
+    fromxy.x = from.get<0>();
+    fromxy.y = from.get<1>();
+    toxy.x = to.get<0>();
+    toxy.y = to.get<1>();
+    return calculate_waypoints(fromxy, toxy);
+}

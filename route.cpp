@@ -28,12 +28,19 @@ void route::update(float dt) {
     param += velocity * dt;
 }
 
-std::pair<float, float> route::get_pos() const {
+route::fxfyvxvy route::get_pos() const {
     auto it = std::lower_bound(accum_distance.begin(), accum_distance.end(), param);
+    auto px = 0.0f, py = 0.0f, dx = 0.0f, dy = 0.0f;
     if (it == accum_distance.begin()) {
-        return std::make_pair(static_cast<float>(waypoints.begin()->x), static_cast<float>(waypoints.begin()->y));
+        px = static_cast<float>(waypoints.begin()->x);
+        py = static_cast<float>(waypoints.begin()->y);
+        dx = static_cast<float>((waypoints.begin() + 1)->x) - px;
+        dy = static_cast<float>((waypoints.begin() + 1)->y) - py;
     } else if (it == accum_distance.end()) {
-        return std::make_pair(static_cast<float>(waypoints.rbegin()->x), static_cast<float>(waypoints.rbegin()->y));
+        px = static_cast<float>(waypoints.rbegin()->x);
+        py = static_cast<float>(waypoints.rbegin()->y);
+        dx = 0;
+        dy = 0;
     } else {
         auto it_idx = it - accum_distance.begin();
         auto wp1 = waypoints[it_idx - 1];
@@ -43,6 +50,11 @@ std::pair<float, float> route::get_pos() const {
         auto r = (param - d1) / (d2 - d1);
         if (r < 0) r = 0;
         if (r > 1) r = 1;
-        return std::make_pair(wp1.x + (wp2.x - wp1.x) * r, wp1.y + (wp2.y - wp1.y) * r);
+        dx = static_cast<float>(wp2.x - wp1.x);
+        dy = static_cast<float>(wp2.y - wp1.y);
+        px = wp1.x + dx * r;
+        py = wp1.y + dy * r;
+        
     }
+    return std::make_pair(std::make_pair(px, py), std::make_pair(dx, dy));
 }

@@ -53,6 +53,7 @@ seaport::seaport()
     boost::interprocess::mapped_region region(seaport_file, boost::interprocess::read_only);
     LWTTLDATA_SEAPORT* sp = reinterpret_cast<LWTTLDATA_SEAPORT*>(region.get_address());
     size_t count = region.get_size() / sizeof(LWTTLDATA_SEAPORT);
+    // dump seaports.dat into r-tree data if r-tree is empty.
     if (rtree_ptr->size() == 0) {
         for (size_t i = 0; i < count; i++) {
             seaport_object_public::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
@@ -60,14 +61,35 @@ seaport::seaport()
         }
     }
     for (size_t i = 0; i < count; i++) {
-        seaport_name[i] = sp[i].name;
+        id_name[i] = sp[i].name;
+        name_id[sp[i].name] = i;
+        id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
 }
 
 const char* seaport::get_seaport_name(int id) const {
-    auto it = seaport_name.find(id);
-    if (it != seaport_name.cend()) {
+    auto it = id_name.find(id);
+    if (it != id_name.cend()) {
         return it->second.c_str();
     }
     return "";
+}
+
+int seaport::get_seaport_id(const char* name) const {
+    auto it = name_id.find(name);
+    if (it != name_id.cend()) {
+        return it->second;
+    }
+    return -1;
+}
+
+seaport_object_public::point_t seaport::get_seaport_point(const char* name) const {
+    auto id = get_seaport_id(name);
+    if (id >= 0) {
+        auto cit = id_point.find(id);
+        if (cit != id_point.end()) {
+            return cit->second;
+        }
+    }
+    return seaport_object_public::point_t(-1, -1);
 }

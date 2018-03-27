@@ -90,14 +90,14 @@ void sea::travel_to(const char* guid, float x, float y, float v) {
     }
 }
 
-void sea::teleport_to(const char* guid, float x, float y) {
+void sea::teleport_to(const char* guid, float x, float y, float vx, float vy) {
     auto it = sea_guid_to_id.find(guid);
     if (it != sea_guid_to_id.end()) {
         auto it2 = sea_objects.find(it->second);
         if (it2 != sea_objects.end()) {
             rtree.remove(it2->second.get_rtree_value());
             it2->second.set_xy(x, y);
-            it2->second.set_velocity(0, 0);
+            it2->second.set_velocity(vx, vy);
             rtree.insert(it2->second.get_rtree_value());
         } else {
             std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;

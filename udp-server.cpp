@@ -6,61 +6,9 @@
 #include "lz4.h"
 #include "route.hpp"
 #include "xy.hpp"
+#include "packet.h"
 
 using namespace ss;
-
-typedef struct _LWPTTLFULLSTATEOBJECT {
-    float x0, y0;
-    float x1, y1;
-    float vx, vy;
-    int id;
-} LWPTTLFULLSTATEOBJECT;
-
-typedef struct _LWPTTLFULLSTATE {
-    unsigned char type;
-    unsigned char padding0;
-    unsigned char padding1;
-    unsigned char padding2;
-    int count;
-    LWPTTLFULLSTATEOBJECT obj[32];
-} LWPTTLFULLSTATE;
-
-typedef struct _LWPTTLSTATICOBJECT {
-    short x0;
-    short y0;
-    short x1;
-    short y1;
-} LWPTTLSTATICOBJECT;
-
-typedef struct _LWPTTLSTATICSTATE {
-    unsigned char type;
-    unsigned char padding0;
-    unsigned char padding1;
-    unsigned char padding2;
-    int count;
-    LWPTTLSTATICOBJECT obj[200];
-} LWPTTLSTATICSTATE;
-
-typedef struct _LWPTTLSEAPORTOBJECT {
-    short x0;
-    short y0;
-    char name[64];
-} LWPTTLSEAPORTOBJECT;
-
-typedef struct _LWPTTLSEAPORTSTATE {
-    unsigned char type;
-    unsigned char padding0;
-    unsigned char padding1;
-    unsigned char padding2;
-    int count;
-    LWPTTLSEAPORTOBJECT obj[200];
-} LWPTTLSEAPORTSTATE;
-
-static std::string make_daytime_string() {
-    using namespace std; // For time_t, time and ctime;
-    time_t now = time(0);
-    return ctime(&now);
-}
 
 const auto update_interval = boost::posix_time::seconds(1);
 //const auto update_interval = boost::posix_time::milliseconds(250);
@@ -76,8 +24,19 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , seaport_(seaport)
 {
     //auto wp = sea_static_->calculate_waypoints(xy{ 14083,2476 }, xy{ 14079,2480 });
-    auto wp = sea_static_->calculate_waypoints(xy{ 14083,2476 }, xy{ 13952,2517 });
-    route_.reset(new route(wp));
+    auto port1 = seaport_->get_seaport_point("Onsan/Ulsan");
+    auto port2 = seaport_->get_seaport_point("Busan");
+    auto port3 = seaport_->get_seaport_point("BusanNewPort");
+    auto port4 = seaport_->get_seaport_point("Anjeong");
+    auto port5 = seaport_->get_seaport_point("Tongyeong");
+    auto wp1 = sea_static_->calculate_waypoints(port1, port2);
+    auto wp2 = sea_static_->calculate_waypoints(port2, port3);
+    auto wp3 = sea_static_->calculate_waypoints(port3, port4);
+    auto wp4 = sea_static_->calculate_waypoints(port4, port5);
+    std::copy(wp2.begin(), wp2.end(), std::back_inserter(wp1));
+    std::copy(wp3.begin(), wp3.end(), std::back_inserter(wp1));
+    std::copy(wp4.begin(), wp4.end(), std::back_inserter(wp1));
+    route_.reset(new route(wp1));
     route_->set_velocity(1);
 
     start_receive();
@@ -91,7 +50,14 @@ void udp_server::update() {
     timer_.async_wait(boost::bind(&udp_server::update, this));
     route_->update(1);
     auto pos = route_->get_pos();
-    sea_->teleport_to("Test A", pos.first, pos.second);
+    auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
+    if (dlen) {
+        sea_->teleport_to("Test A", pos.first.first, pos.first.second, pos.second.first / dlen, pos.second.second / dlen);
+    } else {
+        sea_->teleport_to("Test A", pos.first.first, pos.first.second, 0, 0);
+    }
+    
+    //sea_->travel_to("Test A", )
 }
 
 void udp_server::start_receive() {

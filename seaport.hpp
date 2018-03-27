@@ -7,6 +7,8 @@ namespace ss {
     public:
         std::vector<seaport_object_public> query_near_lng_lat_to_packet(float lng, float lat, short halfex) const;
         const char* get_seaport_name(int id) const;
+        int get_seaport_id(const char* name) const;
+        seaport_object_public::point_t get_seaport_point(const char* name) const;
         seaport();
     private:
         std::vector<seaport_object_public> query_near_to_packet(short xc, short yc, short halfex) const; 
@@ -19,6 +21,8 @@ namespace ss {
         const short res_width;
         const short res_height;
         const float km_per_cell;
-        std::unordered_map<int, std::string> seaport_name;
+        std::unordered_map<int, std::string> id_name;
+        std::unordered_map<int, seaport_object_public::point_t> id_point;
+        std::unordered_map<std::string, int> name_id;
     };
 }

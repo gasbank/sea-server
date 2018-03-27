@@ -11,6 +11,7 @@ namespace ss {
         
         sea_static();
         std::vector<xy> calculate_waypoints(const xy& from, const xy& to) const;
+        std::vector<xy> calculate_waypoints(const sea_static_object_public::point_t& from, const sea_static_object_public::point_t& to) const;
     private:
         std::vector<sea_static_object_public> query_near_to_packet(short xc, short yc, short halfex) const; 
         std::vector<sea_static_object_public::value_t> query_tree(short xc, short yc, short halfex) const;
