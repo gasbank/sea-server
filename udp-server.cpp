@@ -97,7 +97,7 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
     if (error) {
         std::cerr << error << std::endl;
     } else {
-        //std::cout << bytes_transferred << " bytes transferred." << std::endl;
+        //std::cout << bytes_transferred << " bytes sent." << std::endl;
     }
 }
 
@@ -212,6 +212,7 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
 
 void udp_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
+        //std::cout << "PING received." << std::endl;
         float cd = *reinterpret_cast<float*>(recv_buffer_.data() + 0x00); // command type (?)
         float xc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x04); // x center
         float yc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x08); // y center
@@ -220,6 +221,8 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
         send_full_state(xc, yc, ex);
         send_static_state(xc, yc, ex);
         send_seaport(xc, yc, ex);
+
+        //std::cout << "STATE replied." << std::endl;
 
         start_receive();
     }
