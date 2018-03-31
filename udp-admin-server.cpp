@@ -76,6 +76,14 @@ struct teleport_to_command {
     float y;
 };
 
+struct spawn_ship_command {
+    command _;
+    int id;
+    char name[64];
+    float x;
+    float y;
+};
+
 void udp_admin_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
         command* cp = reinterpret_cast<command*>(recv_buffer_.data());
@@ -103,6 +111,14 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             std::cout << boost::format("Teleport To type: %1%\n") % static_cast<int>(cp->type);
             teleport_to_command* spawn = reinterpret_cast<teleport_to_command*>(recv_buffer_.data());;
             sea_->teleport_to(spawn->guid, spawn->x, spawn->y);
+            break;
+        }
+        case 4: // Spawn Ship
+        {
+            assert(bytes_transferred == sizeof(spawn_ship_command));
+            std::cout << boost::format("Spawn Ship type: %1%\n") % static_cast<int>(cp->type);
+            spawn_ship_command* spawn = reinterpret_cast<spawn_ship_command*>(recv_buffer_.data());;
+            sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
             break;
         }
         default:
