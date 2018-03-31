@@ -4,6 +4,8 @@
 #include "lz4.h"
 #include "sea_static.hpp"
 #include "xy.hpp"
+#include "seaport.hpp"
+#include "udp-server.hpp"
 using namespace ss;
 
 typedef struct _LWPTTLFULLSTATEOBJECT {
@@ -29,10 +31,14 @@ static std::string make_daytime_string() {
 
 udp_admin_server::udp_admin_server(boost::asio::io_service & io_service,
                                    std::shared_ptr<sea> sea,
-                                   std::shared_ptr<sea_static> sea_static)
+                                   std::shared_ptr<sea_static> sea_static,
+                                   std::shared_ptr<seaport> seaport,
+                                   udp_server& udp_server)
     : socket_(io_service, udp::endpoint(udp::v4(), 4000))
     , sea_(sea)
-    , sea_static_(sea_static) {
+    , sea_static_(sea_static)
+    , seaport_(seaport)
+    , udp_server_(udp_server) {
     start_receive();
 }
 
@@ -125,7 +131,10 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             spawn_ship_command* spawn = reinterpret_cast<spawn_ship_command*>(recv_buffer_.data());;
             xy spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
             if (sea_static_->is_water(spawn_pos)) {
-                sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
+                int id = sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
+                std::string port1, port2;
+                seaport_->get_nearest_two(spawn_pos, port1, port2);
+                udp_server_.set_route(id, port1, port2);
             }
             break;
         }

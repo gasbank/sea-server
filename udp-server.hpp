@@ -16,7 +16,7 @@ namespace ss {
                    std::shared_ptr<sea> sea,
                    std::shared_ptr<sea_static> sea_static,
                    std::shared_ptr<seaport> seaport);
-
+        void set_route(int id, const std::string& seaport1, const std::string& seaport2);
     private:
         void update();
         void start_receive();

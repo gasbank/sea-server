@@ -1,5 +1,6 @@
 #include "precompiled.hpp"
 #include "seaport.hpp"
+#include "xy.hpp"
 
 #define SEAPORT_RTREE_FILENAME "rtree/seaport.dat"
 #define SEAPORT_RTREE_MMAP_MAX_SIZE (7 * 1024 * 1024)
@@ -92,4 +93,20 @@ seaport_object_public::point_t seaport::get_seaport_point(const char* name) cons
         }
     }
     return seaport_object_public::point_t(-1, -1);
+}
+
+int seaport::get_nearest_two(const xy& pos, std::string& name1, std::string& name2) const {
+    seaport_object_public::point_t p = { boost::numeric_cast<short>(pos.x), boost::numeric_cast<short>(pos.y) };
+    int count = 0;
+    for (auto it = rtree_ptr->qbegin(bgi::nearest(p, 2)); it != rtree_ptr->qend(); it++) {
+        if (count == 0) {
+            name1 = get_seaport_name(it->second);
+            count++;
+        } else if (count == 1) {
+            name2 = get_seaport_name(it->second);
+            count++;
+            return count;
+        }
+    }
+    return 0;
 }

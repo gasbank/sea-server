@@ -35,9 +35,13 @@ int main() {
         float lat = 35.4739403188175f;
         auto sop_list = sea_static_instance->query_near_lng_lat_to_packet(lng, lat, 32);
         std::shared_ptr<seaport> seaport_instance(new seaport());
-        udp_server udp_server(io_service, sea_instance, sea_static_instance, seaport_instance);
-        tcp_server tcp_server(io_service);
-        udp_admin_server udp_admin_server(io_service, sea_instance, sea_static_instance);
+        udp_server udp_server_instance(io_service, sea_instance, sea_static_instance, seaport_instance);
+        tcp_server tcp_server_instance(io_service);
+        udp_admin_server udp_admin_server(io_service,
+                                          sea_instance,
+                                          sea_static_instance,
+                                          seaport_instance,
+                                          udp_server_instance);
         io_service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

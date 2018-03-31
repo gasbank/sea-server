@@ -53,14 +53,22 @@ udp_server::udp_server(boost::asio::io_service & io_service,
         "Onsan/Ulsan",
         "Nokdongsin" });
 
-    route_map_[id6] = create_route({
-        "Onsan/Ulsan",
-        "Yokohama" });
+    // Too slow to debug on Visual Studio...
+    //route_map_[id6] = create_route({
+    //    "Onsan/Ulsan",
+    //    "Yokohama" });
 
     std::cout << "Route setup completed." << std::endl;
 
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
+}
+
+void udp_server::set_route(int id, const std::string& seaport1, const std::string& seaport2) {
+    auto route = create_route({ seaport1, seaport2 });
+    if (route) {
+        route_map_[id] = route;
+    }
 }
 
 void udp_server::update() {
@@ -239,7 +247,12 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
     std::vector<xy> wp_total;
     for (size_t i = 0; i < point_list.size() - 1; i++) {
         auto wp = sea_static_->calculate_waypoints(point_list[i], point_list[i + 1]);
-        std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
+        if (wp.size() >= 2) {
+            std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
+        } else {
+            std::cerr << "Waypoints of less than 2 detected. Route could not be found." << std::endl;
+            return std::shared_ptr<route>();
+        }
     }
     std::shared_ptr<route> r(new route(wp_total));
     r->set_velocity(1);

@@ -6,13 +6,17 @@ namespace ss {
     using boost::asio::ip::udp;
     class sea;
     class sea_static;
+    class seaport;
+    class udp_server;
 
     class udp_admin_server {
 
     public:
         udp_admin_server(boost::asio::io_service& io_service,
                          std::shared_ptr<sea> sea,
-                         std::shared_ptr<sea_static> sea_static);
+                         std::shared_ptr<sea_static> sea_static,
+                         std::shared_ptr<seaport> seaport,
+                         udp_server& udp_server);
 
     private:
         void start_receive();
@@ -31,5 +35,7 @@ namespace ss {
         boost::array<char, 1024> recv_buffer_;
         std::shared_ptr<sea> sea_;
         std::shared_ptr<sea_static> sea_static_;
+        std::shared_ptr<seaport> seaport_;
+        udp_server& udp_server_;
     };
 }
