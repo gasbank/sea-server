@@ -19,4 +19,5 @@ namespace astarrtree {
 
     void astar_rtree(const char* output, size_t output_max_size, xy from, xy to);
     std::vector<xy> astar_rtree_memory(rtree_t* rtree_ptr, xy from, xy to);
+    box_t box_t_from_xy(xy v);
 }

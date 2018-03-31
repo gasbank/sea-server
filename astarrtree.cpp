@@ -307,7 +307,7 @@ int RTreePixelPathNodeComparator(void *node1, void *node2, void *context) {
     }
 }
 
-box_t box_t_from_xy(xy v) {
+box_t astarrtree::box_t_from_xy(xy v) {
     return box_t(point_t(v.x, v.y), point_t(v.x + 1, v.y + 1));
 }
 

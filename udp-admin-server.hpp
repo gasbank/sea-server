@@ -5,11 +5,14 @@ namespace ss {
     namespace bgi = boost::geometry::index;
     using boost::asio::ip::udp;
     class sea;
+    class sea_static;
 
     class udp_admin_server {
 
     public:
-        udp_admin_server(boost::asio::io_service& io_service, std::shared_ptr<sea> sea);
+        udp_admin_server(boost::asio::io_service& io_service,
+                         std::shared_ptr<sea> sea,
+                         std::shared_ptr<sea_static> sea_static);
 
     private:
         void start_receive();
@@ -27,5 +30,6 @@ namespace ss {
         udp::endpoint remote_endpoint_;
         boost::array<char, 1024> recv_buffer_;
         std::shared_ptr<sea> sea_;
+        std::shared_ptr<sea_static> sea_static_;
     };
 }

@@ -2,6 +2,8 @@
 #include "udp-admin-server.hpp"
 #include "sea.hpp"
 #include "lz4.h"
+#include "sea_static.hpp"
+#include "xy.hpp"
 using namespace ss;
 
 typedef struct _LWPTTLFULLSTATEOBJECT {
@@ -25,9 +27,12 @@ static std::string make_daytime_string() {
     return ctime(&now);
 }
 
-udp_admin_server::udp_admin_server(boost::asio::io_service & io_service, std::shared_ptr<sea> sea)
-    : socket_(io_service, udp::endpoint(udp::v4(), 4000)),
-    sea_(sea) {
+udp_admin_server::udp_admin_server(boost::asio::io_service & io_service,
+                                   std::shared_ptr<sea> sea,
+                                   std::shared_ptr<sea_static> sea_static)
+    : socket_(io_service, udp::endpoint(udp::v4(), 4000))
+    , sea_(sea)
+    , sea_static_(sea_static) {
     start_receive();
 }
 
@@ -118,7 +123,10 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             assert(bytes_transferred == sizeof(spawn_ship_command));
             std::cout << boost::format("Spawn Ship type: %1%\n") % static_cast<int>(cp->type);
             spawn_ship_command* spawn = reinterpret_cast<spawn_ship_command*>(recv_buffer_.data());;
-            sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
+            xy spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
+            if (sea_static_->is_water(spawn_pos)) {
+                sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
+            }
             break;
         }
         default:

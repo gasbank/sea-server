@@ -100,3 +100,8 @@ std::vector<xy> ss::sea_static::calculate_waypoints(const sea_static_object_publ
     toxy.y = to.get<1>();
     return calculate_waypoints(fromxy, toxy);
 }
+
+bool ss::sea_static::is_water(const xy& cell) const {
+    auto cell_box = astarrtree::box_t_from_xy(cell);
+    return water_rtree_ptr->qbegin(bgi::contains(cell_box)) != water_rtree_ptr->qend();
+}

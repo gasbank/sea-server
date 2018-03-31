@@ -37,7 +37,7 @@ int main() {
         std::shared_ptr<seaport> seaport_instance(new seaport());
         udp_server udp_server(io_service, sea_instance, sea_static_instance, seaport_instance);
         tcp_server tcp_server(io_service);
-        udp_admin_server udp_admin_server(io_service, sea_instance);
+        udp_admin_server udp_admin_server(io_service, sea_instance, sea_static_instance);
         io_service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
