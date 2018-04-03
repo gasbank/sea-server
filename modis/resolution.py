@@ -13,9 +13,9 @@ for filename in glob.glob('tif/MOD44W_Water_2000_*.tif'):
 		coord = filename[len('tif\MOD44W_Water_2000_'):-4]
 		lat = coord[1]
 		lng = int(coord[2:4])
-		print(lat, lng)
+		#print(lat, lng)
 		header = file.read(4)
-		print('header', binascii.hexlify(header))
+		#print('header', binascii.hexlify(header))
 		tagoffset = file.read(4)
 		#print(binascii.hexlify(tagoffset))
 		seekpos = struct.unpack("<L", tagoffset)[0]
@@ -31,12 +31,12 @@ for filename in glob.glob('tif/MOD44W_Water_2000_*.tif'):
 				w = tiftag[3]
 			if tiftag[0] == 257:
 				h = tiftag[3]
-		print('width', tags[256][0])
-		print('height', tags[257][0])
-		print('Rows per strip', tags[278][0])
+		#print('width', tags[256][0])
+		#print('height', tags[257][0])
+		#print('Rows per strip', tags[278][0])
 		# Seek to StripByteCounts
 		stripByteCounts = []
-		print('Strip Byte Counts')
+		#print('Strip Byte Counts')
 		if tags[279][1] == 1:
 			stripByteCount = tags[279][0]
 			print(stripByteCount, '(single)')
@@ -49,7 +49,7 @@ for filename in glob.glob('tif/MOD44W_Water_2000_*.tif'):
 				#print(stripByteCount)
 		# Seek to StripOffsets
 		stripOffsets = []
-		print('Strip Offsets')
+		#print('Strip Offsets')
 		if tags[273][1] == 1:
 			stripOffset = tags[273][0]
 			print(stripOffset, '(single)')
