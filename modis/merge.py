@@ -104,7 +104,7 @@ print(h_map)
 print('merged W', w_accum)
 print('merged H', h_accum)
 print('Total bytes', w_accum // 8 * h_accum)
-slice_size = h_accum // 4
+slice_size = h_accum // 1
 print('Slice size', slice_size)
 w_slice_count = w_accum // slice_size
 h_slice_count = h_accum // slice_size
@@ -121,7 +121,7 @@ for hslice in range(h_slice_count):
 		
 		# slice rect in global coordinates
 		slicerect = Rectangle(slice_size * wslice, slice_size * hslice, slice_size * (wslice + 1), slice_size * (hslice + 1))
-		out_filename = 'w%d-h%d.dat' % (wslice, hslice)
+		out_filename = 'd:/bin/w%d-h%d.dat' % (wslice, hslice)
 		with open(out_filename, mode='wb') as out_file:
 			slice = bytearray(b'\x01' * slice_size * slice_size)
 			
