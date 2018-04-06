@@ -28,4 +28,16 @@ class Rectangle:
 		return not (self==other)
 
 	def __repr__(self):
-		return type(self).__name__+repr(tuple(self))
+		return Rectangle.__name__+repr(tuple(self))
+		
+	def __sub__(self, other):
+		return Rectangle(self.x1 - other.x1, self.y1 - other.y1, self.x2 - other.x1, self.y2 - other.y1)
+		
+	def area(self):
+		return (self.x2 - self.x1) * (self.y2 - self.y1)
+		
+	def width(self):
+		return self.x2 - self.x1
+	def height(self):
+		return self.y2 - self.y1
+		
