@@ -5,3 +5,5 @@ cmake-build-debug
 /rtree/*.dat
 /crawler/.idea/workspace.xml
 /modis/tif
+/modis/*.pyc
+/modis/__pycache__
