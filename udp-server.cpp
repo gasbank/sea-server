@@ -77,18 +77,7 @@ void udp_server::update() {
     timer_.async_wait(boost::bind(&udp_server::update, this));
 
     for (auto v : route_map_) {
-        v.second->update(1);
-        auto finished = false;
-        auto pos = v.second->get_pos(finished);
-        auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
-        if (dlen) {
-            sea_->teleport_to(v.first, pos.first.first, pos.first.second, pos.second.first / dlen, pos.second.second / dlen);
-        } else {
-            sea_->teleport_to(v.first, pos.first.first, pos.first.second, 0, 0);
-        }
-        if (finished) {
-            v.second->reverse();
-        }
+        sea_->update_route(v.first, v.second);
     }
 }
 

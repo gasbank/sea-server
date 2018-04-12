@@ -4,6 +4,7 @@
 namespace ss {
     namespace bg = boost::geometry;
     namespace bgi = boost::geometry::index;
+    class route;
 
     class sea {
         typedef bg::model::point<float, 2, bg::cs::cartesian> point;
@@ -22,7 +23,10 @@ namespace ss {
         void query_near_lng_lat_to_packet(float lng, float lat, short halfex, std::vector<sea_object_public>& sop_list) const;
         void query_near_to_packet(float xc, float yc, float ex, std::vector<sea_object_public>& sop_list) const;
         void update(float delta_time);
-        
+        void set_object_state(int id, SEA_OBJECT_STATE state);
+        SEA_OBJECT_STATE get_object_state(int id) const;
+        void update_route(int id, std::shared_ptr<route> r);
+        sea_object* get_object(int id);
     private:
         float lng_to_xc(float lng) const;
         float lat_to_yc(float lat) const;

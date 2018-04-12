@@ -1,6 +1,6 @@
 #include "precompiled.hpp"
 #include "sea.hpp"
-//#include "floatingmod.hpp"
+#include "route.hpp"
 using namespace ss;
 
 sea::sea()
@@ -89,6 +89,35 @@ void sea::travel_to(const char* guid, float x, float y, float v) {
     }
 }
 
+SEA_OBJECT_STATE sea::get_object_state(int id) const {
+    auto it = sea_objects.find(id);
+    if (it != sea_objects.end()) {
+        return it->second.get_state();
+    } else {
+        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+    }
+    return SOS_ERROR;
+}
+
+void sea::set_object_state(int id, SEA_OBJECT_STATE state) {
+    auto it = sea_objects.find(id);
+    if (it != sea_objects.end()) {
+        it->second.set_state(state);
+    } else {
+        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+    }
+}
+
+sea_object* sea::get_object(int id) {
+    auto it = sea_objects.find(id);
+    if (it != sea_objects.end()) {
+        return &it->second;
+    } else {
+        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+    }
+    return nullptr;
+}
+
 void sea::teleport_to(int id, float x, float y, float vx, float vy) {
     auto it = sea_objects.find(id);
     if (it != sea_objects.end()) {
@@ -168,5 +197,29 @@ void sea::update(float delta_time) {
                 }
             }
         }
+    }
+    for (auto& obj : sea_objects) {
+        obj.second.update(delta_time);
+    }
+}
+
+void sea::update_route(int id, std::shared_ptr<route> r) {
+    auto finished = false;
+    auto pos = r->get_pos(finished);
+    auto state = get_object_state(id);
+    if (state == SOS_SAILING) {
+        r->update(1);
+        auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
+        if (dlen) {
+            teleport_to(id, pos.first.first, pos.first.second, pos.second.first / dlen, pos.second.second / dlen);
+        } else {
+            teleport_to(id, pos.first.first, pos.first.second, 0, 0);
+        }
+    }
+    if (finished) {
+        auto obj = get_object(id);
+        obj->set_state(SOS_LOADING);
+        obj->set_remain_loading_time(5.0f);
+        r->reverse();
     }
 }

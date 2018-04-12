@@ -12,6 +12,14 @@ namespace ss {
         float vx, vy;
         char guid[64];
     };
+
+    enum SEA_OBJECT_STATE {
+        SOS_SAILING,
+        SOS_LOADING,
+        SOS_UNLOADING,
+        SOS_ERROR,
+    };
+
     class sea_object {
         typedef bg::model::point<float, 2, bg::cs::cartesian> point;
         typedef bg::model::box<point> box;
@@ -26,7 +34,9 @@ namespace ss {
             h(h),
             vx(0),
             vy(0),
-            rtree_value(rtree_value)
+            rtree_value(rtree_value),
+            state(SOS_SAILING),
+            remain_loading_time(0)
         {
         }
         void fill_sop(sea_object_public& sop) const {
@@ -39,6 +49,11 @@ namespace ss {
             sop.id = id;
             sop.type = type;
             strcpy(sop.guid, guid.c_str());
+            if (state == SOS_LOADING) {
+                strcat(sop.guid, "[LOADING]");
+            } else if (state == SOS_UNLOADING) {
+                strcat(sop.guid, "[UNLOADING]");
+            }
         }
         void set_guid(const std::string& v) {
             guid = v;
@@ -74,6 +89,19 @@ namespace ss {
             return sqrtf((dest_x - x) * (dest_x - x) + (dest_y - y) * (dest_y - y));
         }
         const value& get_rtree_value() const { return rtree_value; }
+        void set_state(SEA_OBJECT_STATE state) { this->state = state; }
+        SEA_OBJECT_STATE get_state() const { return state; }
+        void set_remain_loading_time(float remain_loading_time) {
+            this->remain_loading_time = remain_loading_time;
+        }
+        void update(float delta_time) {
+            if (remain_loading_time > 0) {
+                remain_loading_time -= delta_time;
+                if (remain_loading_time <= 0) {
+                    remain_loading_time = 0;                    state = SOS_SAILING;
+                }
+            }
+        }
     private:
         explicit sea_object() {}
         int id;
@@ -84,5 +112,7 @@ namespace ss {
         float dest_x, dest_y;
         std::string guid;
         value rtree_value;
+        SEA_OBJECT_STATE state;
+        float remain_loading_time;
     };
 }
