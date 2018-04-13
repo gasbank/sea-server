@@ -203,12 +203,12 @@ void sea::update(float delta_time) {
     }
 }
 
-void sea::update_route(int id, std::shared_ptr<route> r) {
+void sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
     auto finished = false;
     auto pos = r->get_pos(finished);
     auto state = get_object_state(id);
     if (state == SOS_SAILING) {
-        r->update(1);
+        r->update(delta_time);
         auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
         if (dlen) {
             teleport_to(id, pos.first.first, pos.first.second, pos.second.first / dlen, pos.second.second / dlen);
@@ -219,6 +219,7 @@ void sea::update_route(int id, std::shared_ptr<route> r) {
     if (finished) {
         auto obj = get_object(id);
         obj->set_state(SOS_LOADING);
+        obj->set_velocity(0, 0);
         obj->set_remain_loading_time(5.0f);
         r->reverse();
     }

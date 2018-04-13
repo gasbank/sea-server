@@ -10,7 +10,7 @@ namespace ss {
 
         route(const std::vector<xy>& waypoints);
         void set_velocity(float v) { velocity = v; }
-        void update(float dt);
+        void update(float delta_time);
         fxfyvxvy get_pos(bool& finished) const;
         float get_left() const;
         void reverse();

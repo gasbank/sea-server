@@ -25,7 +25,7 @@ namespace ss {
         void update(float delta_time);
         void set_object_state(int id, SEA_OBJECT_STATE state);
         SEA_OBJECT_STATE get_object_state(int id) const;
-        void update_route(int id, std::shared_ptr<route> r);
+        void update_route(float delta_time, int id, std::shared_ptr<route> r);
         sea_object* get_object(int id);
     private:
         float lng_to_xc(float lng) const;
@@ -38,5 +38,6 @@ namespace ss {
         const short res_width;
         const short res_height;
         const float km_per_cell;
+        int tick_seq;
     };
 }

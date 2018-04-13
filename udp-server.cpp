@@ -10,7 +10,7 @@
 
 using namespace ss;
 
-const auto update_interval = boost::posix_time::seconds(1);
+const auto update_interval = boost::posix_time::milliseconds(75);
 //const auto update_interval = boost::posix_time::milliseconds(250);
 
 udp_server::udp_server(boost::asio::io_service & io_service,
@@ -21,7 +21,9 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , timer_(io_service, update_interval)
     , sea_(sea)
     , sea_static_(sea_static)
-    , seaport_(seaport) {
+    , seaport_(seaport)
+    , tick_seq_(0)
+{
     auto id1 = sea_->spawn("Test A", 1, 14080, 2480, 1, 1);
     auto id2 = sea_->spawn("Test B", 1, 14080, 2480, 1, 1);
     auto id3 = sea_->spawn("Test C", 1, 14080, 2480, 1, 1);
@@ -72,12 +74,15 @@ void udp_server::set_route(int id, const std::string& seaport1, const std::strin
 }
 
 void udp_server::update() {
-    sea_->update(update_interval.total_milliseconds() / 1000.0f);
+    tick_seq_++;
+
     timer_.expires_at(timer_.expires_at() + update_interval);
     timer_.async_wait(boost::bind(&udp_server::update, this));
 
+    float delta_time = update_interval.total_milliseconds() / 1000.0f;
+    sea_->update(delta_time);
     for (auto v : route_map_) {
-        sea_->update_route(v.first, v.second);
+        sea_->update_route(delta_time, v.first, v.second);
     }
 }
 
@@ -214,11 +219,13 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
         float xc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x04); // x center
         float yc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x08); // y center
         float ex = *reinterpret_cast<float*>(recv_buffer_.data() + 0x0c); // extent
+        int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10); // ping_seq
 
         send_full_state(xc, yc, ex);
-        send_static_state(xc, yc, ex);
-        send_seaport(xc, yc, ex);
-
+        if (ping_seq % 64 == 0) {
+            send_static_state(xc, yc, ex);
+            send_seaport(xc, yc, ex);
+        }
         //std::cout << "STATE replied." << std::endl;
 
         start_receive();

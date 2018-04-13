@@ -43,5 +43,6 @@ namespace ss {
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
         std::unordered_map<int, std::shared_ptr<route> > route_map_;
+        int tick_seq_;
     };
 }

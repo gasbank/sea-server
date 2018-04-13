@@ -24,8 +24,8 @@ route::route(const std::vector<xy>& waypoints)
     }
 }
 
-void route::update(float dt) {
-    param += velocity * dt;
+void route::update(float delta_time) {
+    param += velocity * delta_time;
 }
 
 route::fxfyvxvy route::get_pos(bool& finished) const {

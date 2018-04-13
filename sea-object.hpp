@@ -36,8 +36,7 @@ namespace ss {
             vy(0),
             rtree_value(rtree_value),
             state(SOS_SAILING),
-            remain_loading_time(0)
-        {
+            remain_loading_time(0) {
         }
         void fill_sop(sea_object_public& sop) const {
             sop.x = x + 0.5f;
@@ -98,7 +97,8 @@ namespace ss {
             if (remain_loading_time > 0) {
                 remain_loading_time -= delta_time;
                 if (remain_loading_time <= 0) {
-                    remain_loading_time = 0;                    state = SOS_SAILING;
+                    remain_loading_time = 0;
+                    state = SOS_SAILING;
                 }
             }
         }
