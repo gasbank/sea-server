@@ -1,5 +1,7 @@
 #pragma once
 
+#include "container.hpp"
+
 namespace ss {
     namespace bg = boost::geometry;
     namespace bgi = boost::geometry::index;
@@ -114,5 +116,6 @@ namespace ss {
         value rtree_value;
         SEA_OBJECT_STATE state;
         float remain_loading_time;
+        std::vector<container> containers;
     };
 }
