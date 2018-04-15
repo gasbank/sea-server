@@ -22,15 +22,17 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , sea_(sea)
     , sea_static_(sea_static)
     , seaport_(seaport)
-    , tick_seq_(0)
-{
-    auto id1 = sea_->spawn("Test A", 1, 14080, 2480, 1, 1);
-    auto id2 = sea_->spawn("Test B", 1, 14080, 2480, 1, 1);
-    auto id3 = sea_->spawn("Test C", 1, 14080, 2480, 1, 1);
-    auto id4 = sea_->spawn("Test D", 1, 14080, 2480, 1, 1);
-    auto id5 = sea_->spawn("Test E", 1, 14080, 2480, 1, 1);
-    auto id6 = sea_->spawn("Test F", 1, 14080, 2480, 1, 1);
-    auto id7 = sea_->spawn("Test G", 1, 14080, 2480, 1, 1);
+    , tick_seq_(0) {
+    auto spawn_point = seaport_->get_seaport_point("Busan");
+    auto spawn_point_x = static_cast<float>(spawn_point.get<0>());
+    auto spawn_point_y = static_cast<float>(spawn_point.get<1>());
+    auto id1 = sea_->spawn("Test A", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id2 = sea_->spawn("Test B", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id3 = sea_->spawn("Test C", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id4 = sea_->spawn("Test D", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id5 = sea_->spawn("Test E", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id6 = sea_->spawn("Test F", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id7 = sea_->spawn("Test G", 1, spawn_point_x, spawn_point_y, 1, 1);
 
     route_map_[id1] = create_route({
         "Onsan/Ulsan",

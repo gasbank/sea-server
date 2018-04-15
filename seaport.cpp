@@ -8,11 +8,13 @@
 using namespace ss;
 
 int seaport::lng_to_xc(float lng) const {
-    return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
+    //return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
+    return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2));
 }
 
 int seaport::lat_to_yc(float lat) const {
-    return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2)) & (res_height - 1);
+    //return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2)) & (res_height - 1);
+    return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
 }
 
 std::vector<seaport_object_public> seaport::query_near_lng_lat_to_packet(float lng, float lat, int halfex) const {

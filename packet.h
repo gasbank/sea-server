@@ -19,10 +19,10 @@ typedef struct _LWPTTLFULLSTATE {
 } LWPTTLFULLSTATE;
 
 typedef struct _LWPTTLSTATICOBJECT {
-    short x0;
-    short y0;
-    short x1;
-    short y1;
+    int x0;
+    int y0;
+    int x1;
+    int y1;
 } LWPTTLSTATICOBJECT;
 
 typedef struct _LWPTTLSTATICSTATE {
@@ -35,8 +35,8 @@ typedef struct _LWPTTLSTATICSTATE {
 } LWPTTLSTATICSTATE;
 
 typedef struct _LWPTTLSEAPORTOBJECT {
-    short x0;
-    short y0;
+    int x0;
+    int y0;
     char name[64];
 } LWPTTLSEAPORTOBJECT;
 

@@ -13,11 +13,13 @@
 using namespace ss;
 
 int sea_static::lng_to_xc(float lng) const {
-    return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
+    //return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
+    return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2));
 }
 
 int sea_static::lat_to_yc(float lat) const {
-    return static_cast<int >(roundf(res_height / 2 - lat / 90.0f * res_height / 2)) & (res_height - 1);
+    //return static_cast<int >(roundf(res_height / 2 - lat / 90.0f * res_height / 2)) & (res_height - 1);
+    return static_cast<int >(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
 }
 
 std::vector<sea_static_object_public> sea_static::query_near_lng_lat_to_packet(float lng, float lat, int halfex) const {

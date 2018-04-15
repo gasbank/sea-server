@@ -18,7 +18,7 @@ route::route(const std::vector<xy32>& waypoints)
         float dist = 0;
         accum_distance.push_back(dist);
         for (size_t i = 0; i < waypoints.size() - 1; i++) {
-            dist += distance_xy(waypoints[i], waypoints[i+1]);
+            dist += distance_xy(waypoints[i], waypoints[i + 1]);
             accum_distance.push_back(dist);
         }
     }
@@ -29,6 +29,9 @@ void route::update(float delta_time) {
 }
 
 route::fxfyvxvy route::get_pos(bool& finished) const {
+    if (accum_distance.size() == 0) {
+        return route::fxfyvxvy{ { 0.0f, 0.0f }, { 0.0f, 0.0f } };
+    }
     auto it = std::lower_bound(accum_distance.begin(), accum_distance.end(), param);
     auto px = 0.0f, py = 0.0f, dx = 0.0f, dy = 0.0f;
     finished = false;
