@@ -20,7 +20,7 @@ namespace ss {
         void teleport_to(int id, float x, float y, float vx = 0, float vy = 0);
         void teleport_to(const char* guid, float x, float y, float vx = 0, float vy = 0);
         void teleport_by(const char* guid, float dx, float dy);
-        void query_near_lng_lat_to_packet(float lng, float lat, int halfex, std::vector<sea_object_public>& sop_list) const;
+        void query_near_lng_lat_to_packet(float lng, float lat, float ex, std::vector<sea_object_public>& sop_list) const;
         void query_near_to_packet(float xc, float yc, float ex, std::vector<sea_object_public>& sop_list) const;
         void update(float delta_time);
         void set_object_state(int id, SEA_OBJECT_STATE state);

@@ -7,7 +7,7 @@ struct xy32;
 namespace ss {
     class sea_static {
     public:
-        std::vector<sea_static_object_public> query_near_lng_lat_to_packet(float lng, float lat, int halfex) const;
+        std::vector<sea_static_object_public> query_near_lng_lat_to_packet(float lng, float lat, float ex) const;
         
         sea_static();
         std::vector<xy32> calculate_waypoints(const xy32& from, const xy32& to) const;

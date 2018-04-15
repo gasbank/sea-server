@@ -107,7 +107,7 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
 
 void udp_server::send_full_state(float xc, float yc, float ex) {
     std::vector<sea_object_public> sop_list;
-    sea_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2), sop_list);
+    sea_->query_near_lng_lat_to_packet(xc, yc, ex, sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
@@ -151,7 +151,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
 }
 
 void udp_server::send_static_state(float xc, float yc, float ex) {
-    auto sop_list = sea_static_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2));
+    auto sop_list = sea_static_->query_near_lng_lat_to_packet(xc, yc, ex);
 
     boost::shared_ptr<LWPTTLSTATICSTATE> reply(new LWPTTLSTATICSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE));
@@ -216,20 +216,25 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
 
 void udp_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
-        //std::cout << "PING received." << std::endl;
-        float cd = *reinterpret_cast<float*>(recv_buffer_.data() + 0x00); // command type (?)
-        float xc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x04); // x center
-        float yc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x08); // y center
-        float ex = *reinterpret_cast<float*>(recv_buffer_.data() + 0x0c); // extent
-        int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10); // ping_seq
+        unsigned char type = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x00); // type
+        if (type == 110) {
+            // LPGP_LWPTTLPING
+            //std::cout << "PING received." << std::endl;
+            unsigned char padding0 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x01); // padding0
+            unsigned char padding1 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x02); // padding1
+            unsigned char padding2 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x03); // padding2
+            float xc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x04); // x center
+            float yc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x08); // y center
+            float ex = *reinterpret_cast<float*>(recv_buffer_.data() + 0x0c); // extent
+            int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10); // ping_seq
 
-        send_full_state(xc, yc, ex);
-        if (ping_seq % 64 == 0) {
-            send_static_state(xc, yc, ex);
-            send_seaport(xc, yc, ex);
+            send_full_state(xc, yc, ex);
+            if (ping_seq % 64 == 0) {
+                send_static_state(xc, yc, ex);
+                send_seaport(xc, yc, ex);
+            }
+            //std::cout << "STATE replied." << std::endl;
         }
-        //std::cout << "STATE replied." << std::endl;
-
         start_receive();
     }
 }
