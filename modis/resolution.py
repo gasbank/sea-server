@@ -7,7 +7,12 @@ import struct
 width_map = {}
 height_map = {}
 
-for filename in glob.glob('tif/MOD44W_Water_2000_*.tif'):
+TIFF_TAG_WIDTH = 256
+TIFF_TAG_HEIGHT = 257
+TIFF_TAG_STRIP_BYTE_COUNT = 279
+TIFF_TAG_STRIP_OFFSET = 273
+
+for filename in glob.glob('tif/MOD44W_Water_2000_*.tif')[:1]:
 	print(filename)
 	with open(filename, mode='rb') as file:
 		coord = filename[len('tif\MOD44W_Water_2000_'):-4]
@@ -21,15 +26,15 @@ for filename in glob.glob('tif/MOD44W_Water_2000_*.tif'):
 		seekpos = struct.unpack("<L", tagoffset)[0]
 		file.seek(seekpos)
 		tagcount = struct.unpack("<H", file.read(2))[0]
-		#print('tagcount', tagcount)
+		print('tagcount', tagcount)
 		tags = {}
 		for i in range(tagcount):
 			tiftag = struct.unpack("<HHLL", file.read(2+2+4+4))
-			#print(tiftag)
+			print(tiftag)
 			tags[tiftag[0]] = (tiftag[3], tiftag[2]) # offset & count
-			if tiftag[0] == 256:
+			if tiftag[0] == TIFF_TAG_WIDTH:
 				w = tiftag[3]
-			if tiftag[0] == 257:
+			if tiftag[0] == TIFF_TAG_HEIGHT:
 				h = tiftag[3]
 		#print('width', tags[256][0])
 		#print('height', tags[257][0])
@@ -37,26 +42,26 @@ for filename in glob.glob('tif/MOD44W_Water_2000_*.tif'):
 		# Seek to StripByteCounts
 		stripByteCounts = []
 		#print('Strip Byte Counts')
-		if tags[279][1] == 1:
-			stripByteCount = tags[279][0]
+		if tags[TIFF_TAG_STRIP_BYTE_COUNT][1] == 1:
+			stripByteCount = tags[TIFF_TAG_STRIP_BYTE_COUNT][0]
 			print(stripByteCount, '(single)')
 			stripByteCounts.append(stripByteCount)
 		else:
-			file.seek(tags[279][0])
-			for i in range(tags[279][1]):
+			file.seek(tags[TIFF_TAG_STRIP_BYTE_COUNT][0])
+			for i in range(tags[TIFF_TAG_STRIP_BYTE_COUNT][1]):
 				stripByteCount = struct.unpack("<L", file.read(4))[0]
 				stripByteCounts.append(stripByteCount)
 				#print(stripByteCount)
 		# Seek to StripOffsets
 		stripOffsets = []
 		#print('Strip Offsets')
-		if tags[273][1] == 1:
-			stripOffset = tags[273][0]
+		if tags[TIFF_TAG_STRIP_OFFSET][1] == 1:
+			stripOffset = tags[TIFF_TAG_STRIP_OFFSET][0]
 			print(stripOffset, '(single)')
 			stripOffsets.append(stripOffset)
 		else:
-			file.seek(tags[273][0])
-			for i in range(tags[273][1]):
+			file.seek(tags[TIFF_TAG_STRIP_OFFSET][0])
+			for i in range(tags[TIFF_TAG_STRIP_OFFSET][1]):
 				stripOffset = struct.unpack("<L", file.read(4))[0]
 				stripOffsets.append(stripOffset)
 				#print(stripOffset)
