@@ -105,12 +105,12 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
 
 void udp_server::send_full_state(float xc, float yc, float ex) {
     std::vector<sea_object_public> sop_list;
-    sea_->query_near_lng_lat_to_packet(xc, yc, static_cast<short>(ex / 2), sop_list);
+    sea_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2), sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
-    reply->count = sop_list.size();
+    reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
     BOOST_FOREACH(sea_object_public const& v, sop_list) {
         reply->obj[reply_obj_index].x0 = v.x;
@@ -135,7 +135,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
     }
     //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
     char compressed[1500];
-    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), boost::size(compressed));
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
@@ -149,12 +149,12 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
 }
 
 void udp_server::send_static_state(float xc, float yc, float ex) {
-    auto sop_list = sea_static_->query_near_lng_lat_to_packet(xc, yc, static_cast<short>(ex / 2));
+    auto sop_list = sea_static_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2));
 
     boost::shared_ptr<LWPTTLSTATICSTATE> reply(new LWPTTLSTATICSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE));
     reply->type = 111; // LPGP_LWPTTLSTATICSTATE
-    reply->count = sop_list.size();
+    reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
     BOOST_FOREACH(sea_static_object_public const& v, sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
@@ -168,7 +168,7 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
     }
     //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
     char compressed[1500];
-    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE), boost::size(compressed));
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
@@ -182,12 +182,12 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
 }
 
 void udp_server::send_seaport(float xc, float yc, float ex) {
-    auto sop_list = seaport_->query_near_lng_lat_to_packet(xc, yc, static_cast<short>(ex / 2));
+    auto sop_list = seaport_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2));
 
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
-    reply->count = sop_list.size();
+    reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
     BOOST_FOREACH(seaport_object_public const& v, sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
@@ -199,7 +199,7 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
         }
     }
     char compressed[1500];
-    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSEAPORTSTATE), boost::size(compressed));
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSEAPORTSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
@@ -240,7 +240,7 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
     for (auto v : seaport_list) {
         point_list.emplace_back(seaport_->get_seaport_point(v.c_str()));
     }
-    std::vector<xy> wp_total;
+    std::vector<xy32> wp_total;
     for (size_t i = 0; i < point_list.size() - 1; i++) {
         auto wp = sea_static_->calculate_waypoints(point_list[i], point_list[i + 1]);
         if (wp.size() >= 2) {

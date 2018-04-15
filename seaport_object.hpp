@@ -7,7 +7,7 @@ namespace ss {
     namespace bgi = boost::geometry::index;
 
     struct seaport_object_public {
-        typedef bgm::point<short, 2, bg::cs::cartesian> point_t;
+        typedef bgm::point<int, 2, bg::cs::cartesian> point_t;
         typedef bgm::box<point_t> box_t; // only for query
         typedef std::pair<point_t, int> value_t;
         typedef bgi::linear<32, 8> params_t;
@@ -16,7 +16,7 @@ namespace ss {
         typedef bi::allocator<value_t, bi::managed_mapped_file::segment_manager> allocator_t;
         typedef bgi::rtree<value_t, params_t, indexable_t, equal_to_t, allocator_t> rtree_t;
 
-        short x0, y0;
+        int x0, y0;
         int id;
 
         seaport_object_public(const value_t& v)

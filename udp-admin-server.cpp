@@ -129,7 +129,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             assert(bytes_transferred == sizeof(spawn_ship_command));
             std::cout << boost::format("Spawn Ship type: %1%\n") % static_cast<int>(cp->type);
             spawn_ship_command* spawn = reinterpret_cast<spawn_ship_command*>(recv_buffer_.data());;
-            xy spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
+            xy32 spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
             if (sea_static_->is_water(spawn_pos)) {
                 int id = sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
                 std::string port1, port2;

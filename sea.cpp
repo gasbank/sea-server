@@ -4,9 +4,9 @@
 using namespace ss;
 
 sea::sea()
-    : res_width(1 << 14) // 16384
-    , res_height(1 << 13) // 8192
-    , km_per_cell(40075.0f / res_width) {
+    : res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
+    , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
+    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width) {
 }
 
 float sea::lng_to_xc(float lng) const {
@@ -55,7 +55,7 @@ int sea::spawn(const char* guid, int type, float x, float y, float w, float h) {
 }
 
 int sea::spawn(int type, float x, float y, float w, float h) {
-    int id = sea_objects.size() + 1;
+    int id = static_cast<int>(sea_objects.size()) + 1;
     box b(point(x, y), point(x + w, y + h));
     auto rtree_value = std::make_pair(b, id);
     sea_objects.emplace(std::pair<int, sea_object>(id, sea_object(id, type, x, y, w, h, rtree_value)));
@@ -155,7 +155,7 @@ void sea::teleport_by(const char* guid, float dx, float dy) {
     }
 }
 
-void sea::query_near_lng_lat_to_packet(float lng, float lat, short halfex, std::vector<sea_object_public>& sop_list) const {
+void sea::query_near_lng_lat_to_packet(float lng, float lat, int halfex, std::vector<sea_object_public>& sop_list) const {
     query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), halfex * 2.0f, sop_list);
 }
 

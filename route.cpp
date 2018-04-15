@@ -4,11 +4,11 @@
 
 using namespace ss;
 
-float distance_xy(const xy& a, const xy& b) {
+float distance_xy(const xy32& a, const xy32& b) {
     return sqrtf(static_cast<float>((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)));
 }
 
-route::route(const std::vector<xy>& waypoints)
+route::route(const std::vector<xy32>& waypoints)
     : waypoints(waypoints)
     , velocity(0)
     , param(0) {

@@ -8,7 +8,7 @@ namespace astarrtree {
     namespace bgm = bg::model;
     namespace bgi = bg::index;
 
-    typedef bgm::point<short, 2, bg::cs::cartesian> point_t;
+    typedef bgm::point<int, 2, bg::cs::cartesian> point_t;
     typedef bgm::box<point_t> box_t;
     typedef std::pair<box_t, int> value_t;
     typedef bgi::linear<32, 8> params_t;
@@ -17,7 +17,7 @@ namespace astarrtree {
     typedef bi::allocator<value_t, bi::managed_mapped_file::segment_manager> allocator_t;
     typedef bgi::rtree<value_t, params_t, indexable_t, equal_to_t, allocator_t> rtree_t;
 
-    void astar_rtree(const char* output, size_t output_max_size, xy from, xy to);
-    std::vector<xy> astar_rtree_memory(rtree_t* rtree_ptr, xy from, xy to);
-    box_t box_t_from_xy(xy v);
+    void astar_rtree(const char* output, size_t output_max_size, xy32 from, xy32 to);
+    std::vector<xy32> astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, xy32 to);
+    box_t box_t_from_xy(xy32 v);
 }

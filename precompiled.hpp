@@ -21,3 +21,7 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/filesystem.hpp>
+
+#define WORLD_MAP_PIXEL_RESOLUTION_WIDTH (172824)
+#define WORLD_MAP_PIXEL_RESOLUTION_HEIGHT (86412)
+#define WORLD_CIRCUMFERENCE_IN_KM (40075.0f)
