@@ -112,7 +112,6 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
-    reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
     for (sea_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x;
@@ -135,6 +134,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
             break;
         }
     }
+    reply->count = static_cast<int>(reply_obj_index);
     //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), static_cast<int>(boost::size(compressed)));
@@ -156,7 +156,6 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
     boost::shared_ptr<LWPTTLSTATICSTATE> reply(new LWPTTLSTATICSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE));
     reply->type = 111; // LPGP_LWPTTLSTATICSTATE
-    reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
     for (sea_static_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
@@ -168,6 +167,7 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
             break;
         }
     }
+    reply->count = static_cast<int>(reply_obj_index);
     //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE), static_cast<int>(boost::size(compressed)));
@@ -189,7 +189,6 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
-    reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
     for (seaport_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
@@ -200,6 +199,7 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
             break;
         }
     }
+    reply->count = static_cast<int>(reply_obj_index);
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSEAPORTSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
