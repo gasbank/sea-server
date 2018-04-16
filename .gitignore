@@ -8,3 +8,4 @@ cmake-build-debug
 /modis/*.pyc
 /modis/__pycache__
 /build-x64/
+/rtree/*.bin

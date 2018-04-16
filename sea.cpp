@@ -163,7 +163,7 @@ void sea::query_near_to_packet(float xc, float yc, float ex, std::vector<sea_obj
     auto id_list = query_tree(xc, yc, ex);
     sop_list.resize(id_list.size());
     std::size_t i = 0;
-    BOOST_FOREACH(int id, id_list) {
+    for (int id : id_list) {
         auto f = sea_objects.find(id);
         if (f != sea_objects.end()) {
             f->second.fill_sop(sop_list[i]);
@@ -177,14 +177,14 @@ std::vector<int> sea::query_tree(float xc, float yc, float ex) const {
     std::vector<value> result_s;
     std::vector<int> id_list;
     rtree.query(bgi::intersects(query_box), std::back_inserter(result_s));
-    BOOST_FOREACH(value const& v, result_s) {
+    for (value const& v : result_s) {
         id_list.push_back(v.second);
     }
     return id_list;
 }
 
 void sea::update(float delta_time) {
-    BOOST_FOREACH(const auto& it, sea_guid_to_id) {
+    for(const auto& it : sea_guid_to_id) {
         const auto& it2 = sea_objects.find(it.second);
         if (it2 != sea_objects.cend()) {
             float vx = 0, vy = 0;

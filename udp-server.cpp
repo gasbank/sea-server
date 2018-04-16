@@ -114,7 +114,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
     reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
-    BOOST_FOREACH(sea_object_public const& v, sop_list) {
+    for (sea_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x;
         reply->obj[reply_obj_index].y0 = v.y;
         reply->obj[reply_obj_index].x1 = v.x + v.w;
@@ -158,7 +158,7 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
     reply->type = 111; // LPGP_LWPTTLSTATICSTATE
     reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
-    BOOST_FOREACH(sea_static_object_public const& v, sop_list) {
+    for (sea_static_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
         reply->obj[reply_obj_index].y0 = v.y0;
         reply->obj[reply_obj_index].x1 = v.x1;
@@ -191,7 +191,7 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
     reply->count = static_cast<int>(sop_list.size());
     size_t reply_obj_index = 0;
-    BOOST_FOREACH(seaport_object_public const& v, sop_list) {
+    for (seaport_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
         reply->obj[reply_obj_index].y0 = v.y0;
         strcpy(reply->obj[reply_obj_index].name, seaport_->get_seaport_name(v.id));
