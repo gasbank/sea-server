@@ -44,6 +44,7 @@ std::vector<sea_static_object_public::value_t> sea_static::query_tree(int xc, in
 
 void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const char* dump_filename) {
     if (rtree_ptr->size() == 0) {
+        printf("R-tree empty. Trying to create R-tree from dump file %s...\n", dump_filename);
         int rect_count = 0;
         FILE* fin = fopen(dump_filename, "rb");
         if (fin) {
@@ -62,7 +63,7 @@ void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const
             printf("Max rect R Tree size (after loaded from %s): %zu\n", dump_filename, rtree_ptr->size());
         }
         else {
-            printf("Dump file %s not exist.\n", dump_filename);
+            printf("[Error] Dump file %s not exist!\n", dump_filename);
         }
     }
 }
