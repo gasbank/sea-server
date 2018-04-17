@@ -33,6 +33,7 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     auto id5 = sea_->spawn("Test E", 1, spawn_point_x, spawn_point_y, 1, 1);
     auto id6 = sea_->spawn("Test F", 1, spawn_point_x, spawn_point_y, 1, 1);
     auto id7 = sea_->spawn("Test G", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id8 = sea_->spawn("Test H", 1, spawn_point_x, spawn_point_y, 1, 1);
 
     route_map_[id1] = create_route({
         "Onsan/Ulsan",
@@ -61,6 +62,14 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     route_map_[id6] = create_route({
         "Onsan/Ulsan",
         "Yokohama" });
+
+    route_map_[id7] = create_route({
+        "Pilottown",
+        "Yokohama" });
+
+    route_map_[id8] = create_route({
+        "Yokohama",
+        "Jurong/Singapore" });
 
     std::cout << "Route setup completed." << std::endl;
 
@@ -123,7 +132,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
         reply->obj[reply_obj_index].id = v.id;
         strcpy(reply->obj[reply_obj_index].guid, v.guid);
         auto it = route_map_.find(v.id);
-        if (it != route_map_.end()) {
+        if (it != route_map_.end() && it->second) {
             reply->obj[reply_obj_index].route_left = it->second->get_left();
         } else {
             reply->obj[reply_obj_index].route_left = 0;

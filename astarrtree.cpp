@@ -73,14 +73,15 @@ struct pixel_waypoint_search {
 };
 
 void RTreePixelPathNodeNeighbors(ASNeighborList neighbors, void *node, void *context);
+typedef void(*AStarNodeNeighborsCallback)(ASNeighborList neighbors, void *node, void *context);
 
-void AddNeighborWithLog(ASNeighborList neighbors, xy32ib* n, pixel_waypoint_search* pws, int x, int y, size_t i, XYIB_ENTER_EXIT ee) {
+void AddNeighborWithLog(ASNeighborList neighbors, xy32ib* n, pixel_waypoint_search* pws, int x, int y, size_t i, XYIB_ENTER_EXIT ee, AStarNodeNeighborsCallback cb) {
     xy32ib neighbor = { { x, y }, i, ee };
     if (n->p.x == x && n->p.y == y && n->ee == XEE_ENTER && ee == XEE_EXIT && n->i == i) {
         // if 'n' and 'neighbor' have the same coordinates...
         // make 'n' exit node and rerun RTreePixelPathNodeNeighbors()
         n->ee = XEE_EXIT;
-        RTreePixelPathNodeNeighbors(neighbors, n, pws);
+        cb(neighbors, n, pws);
     } else {
         ASNeighborListAdd(neighbors, &neighbor, xyib_distance(*n, neighbor));
         /*printf("Neighbor of (%5d,%5d)[%5d] : (%5d,%5d)[%5d]\n",
@@ -210,6 +211,107 @@ RECT_RELATION rect_neighbor_relation(const xy32xy32* n1c, const xy32xy32* n2c) {
     }
 }
 
+
+int ClampIntInclusiveExclusive(int v, int beg, int end) {
+    if (beg >= end) {
+        abort();
+    }
+    if (v < beg) {
+        return beg;
+    } else if (v >= end) {
+        return end - 1;
+    } else {
+        return v;
+    }
+}
+
+void AddNeighborByRectRelation(xy32xy32* n1c,
+                               xy32xy32* n2c,
+                               const ASNeighborList& neighbors,
+                               xy32ib* n,
+                               pixel_waypoint_search* pws,
+                               const size_t& next_i,
+                               XYIB_ENTER_EXIT next_ee,
+                               bool add_nearest_only,
+                               AStarNodeNeighborsCallback cb) {
+    switch (rect_neighbor_relation(n1c, n2c)) {
+    case RR_DOWN_RIGHT:
+        AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, n2c->xy0.y, next_i, next_ee, cb);
+        break;
+    case RR_UP_RIGHT:
+        AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, n2c->xy1.y - 1, next_i, next_ee, cb);
+        break;
+    case RR_UP_LEFT:
+        AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, n2c->xy1.y - 1, next_i, next_ee, cb);
+        break;
+    case RR_DOWN_LEFT:
+        AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, n2c->xy0.y, next_i, next_ee, cb);
+        break;
+    case RR_DOWN:
+    {
+        const int xbeg = std::max(n1c->xy0.x, n2c->xy0.x);
+        const int xend = std::min(n1c->xy1.x, n2c->xy1.x);
+        if (add_nearest_only) {
+            int x = ClampIntInclusiveExclusive(n->p.x, xbeg, xend);
+            AddNeighborWithLog(neighbors, n, pws, x, n2c->xy0.y, next_i, next_ee, cb);
+        } else {
+            for (int x = xbeg; x < xend; x++) {
+                AddNeighborWithLog(neighbors, n, pws, x, n2c->xy0.y, next_i, next_ee, cb);
+            }
+        }
+        break;
+    }
+    case RR_UP:
+    {
+        const int xbeg = std::max(n1c->xy0.x, n2c->xy0.x);
+        const int xend = std::min(n1c->xy1.x, n2c->xy1.x);
+        if (add_nearest_only) {
+            int x = ClampIntInclusiveExclusive(n->p.x, xbeg, xend);
+            AddNeighborWithLog(neighbors, n, pws, x, n2c->xy1.y - 1, next_i, next_ee, cb);
+        } else {
+            for (int x = xbeg; x < xend; x++) {
+                AddNeighborWithLog(neighbors, n, pws, x, n2c->xy1.y - 1, next_i, next_ee, cb);
+            }
+        }
+        break;
+    }   
+    case RR_RIGHT:
+    {
+        const int ybeg = std::max(n1c->xy0.y, n2c->xy0.y);
+        const int yend = std::min(n1c->xy1.y, n2c->xy1.y);
+        if (add_nearest_only) {
+            int y = ClampIntInclusiveExclusive(n->p.y, ybeg, yend);
+            AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, y, next_i, next_ee, cb);
+        } else {
+            for (int y = ybeg; y < yend; y++) {
+                AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, y, next_i, next_ee, cb);
+            }
+        }
+        break;
+    }
+        
+    case RR_LEFT:
+    {
+        const int ybeg = std::max(n1c->xy0.y, n2c->xy0.y);
+        const int yend = std::min(n1c->xy1.y, n2c->xy1.y);
+        if (add_nearest_only) {
+            int y = ClampIntInclusiveExclusive(n->p.y, ybeg, yend);
+            AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, y, next_i, next_ee, cb);
+        } else {
+            for (int y = ybeg; y < yend; y++) {
+                AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, y, next_i, next_ee, cb);
+            }
+        }
+        break;
+    }   
+    case RR_UNKNOWN:
+    default:
+        std::cerr << "Logic error for finding neighboring pixels..." << std::endl;
+        abort();
+        break;
+    }
+}
+
 void RTreePixelPathNodeNeighbors(ASNeighborList neighbors, void *node, void *context) {
     xy32ib* n = reinterpret_cast<xy32ib*>(node);
     pixel_waypoint_search* pws = reinterpret_cast<pixel_waypoint_search*>(context);
@@ -221,7 +323,7 @@ void RTreePixelPathNodeNeighbors(ASNeighborList neighbors, void *node, void *con
         return;
     } else if (n->i == cell_path_count - 1 && n->ee == XEE_ENTER) {
         // all last cells' pixels (except endpoint pixel) always have the only neighbor: endpoint pixel
-        AddNeighborWithLog(neighbors, n, pws, pws->to.x, pws->to.y, cell_path_count - 1, XEE_EXIT);
+        AddNeighborWithLog(neighbors, n, pws, pws->to.x, pws->to.y, cell_path_count - 1, XEE_EXIT, RTreePixelPathNodeNeighbors);
         return;
     }
     xy32xy32* n1c;
@@ -244,46 +346,61 @@ void RTreePixelPathNodeNeighbors(ASNeighborList neighbors, void *node, void *con
         std::cerr << "Corrupted ee" << std::endl;
         abort();
     }
+    AddNeighborByRectRelation(n1c,
+                              n2c,
+                              neighbors,
+                              n,
+                              pws,
+                              next_i,
+                              next_ee,
+                              false,
+                              RTreePixelPathNodeNeighbors);
+}
 
-    switch (rect_neighbor_relation(n1c, n2c)) {
-    case RR_DOWN_RIGHT:
-        AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, n2c->xy0.y, next_i, next_ee);
-        break;
-    case RR_UP_RIGHT:
-        AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, n2c->xy1.y - 1, next_i, next_ee);
-        break;
-    case RR_UP_LEFT:
-        AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, n2c->xy1.y - 1, next_i, next_ee);
-        break;
-    case RR_DOWN_LEFT:
-        AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, n2c->xy0.y, next_i, next_ee);
-        break;
-    case RR_DOWN:
-        for (int x = std::max(n1c->xy0.x, n2c->xy0.x); x < std::min(n1c->xy1.x, n2c->xy1.x); x++) {
-            AddNeighborWithLog(neighbors, n, pws, x, n2c->xy0.y, next_i, next_ee);
-        }
-        break;
-    case RR_UP:
-        for (int x = std::max(n1c->xy0.x, n2c->xy0.x); x < std::min(n1c->xy1.x, n2c->xy1.x); x++) {
-            AddNeighborWithLog(neighbors, n, pws, x, n2c->xy1.y - 1, next_i, next_ee);
-        }
-        break;
-    case RR_RIGHT:
-        for (int y = std::max(n1c->xy0.y, n2c->xy0.y); y < std::min(n1c->xy1.y, n2c->xy1.y); y++) {
-            AddNeighborWithLog(neighbors, n, pws, n2c->xy0.x, y, next_i, next_ee);
-        }
-        break;
-    case RR_LEFT:
-        for (int y = std::max(n1c->xy0.y, n2c->xy0.y); y < std::min(n1c->xy1.y, n2c->xy1.y); y++) {
-            AddNeighborWithLog(neighbors, n, pws, n2c->xy1.x - 1, y, next_i, next_ee);
-        }
-        break;
-    case RR_UNKNOWN:
-    default:
-        std::cerr << "Logic error for finding neighboring pixels..." << std::endl;
-        abort();
-        break;
+void RTreePixelPathNodeNeighborsSuboptimal(ASNeighborList neighbors, void *node, void *context) {
+    xy32ib* n = reinterpret_cast<xy32ib*>(node);
+    pixel_waypoint_search* pws = reinterpret_cast<pixel_waypoint_search*>(context);
+    ASPath cell_path = pws->cell_path;
+    size_t cell_path_count = ASPathGetCount(cell_path);
+    if (n->p.x == pws->to.x && n->p.y == pws->to.y) {
+        // 'n' equals to 'to': reached endpoint (to-pixel)
+        // no neighbors on endpoint
+        return;
+    } else if (n->i == cell_path_count - 1 && n->ee == XEE_ENTER) {
+        // all last cells' pixels (except endpoint pixel) always have the only neighbor: endpoint pixel
+        AddNeighborWithLog(neighbors, n, pws, pws->to.x, pws->to.y, cell_path_count - 1, XEE_EXIT, RTreePixelPathNodeNeighborsSuboptimal);
+        return;
     }
+    xy32xy32* n1c;
+    xy32xy32* n2c;
+    XYIB_ENTER_EXIT next_ee = XEE_ENTER;
+    size_t next_i = 0;
+    if (n->ee == XEE_ENTER) {
+        // Get exit nodes at the same cell node
+        n1c = reinterpret_cast<xy32xy32*>(ASPathGetNode(cell_path, n->i + 1)); // Next Cell node
+        n2c = reinterpret_cast<xy32xy32*>(ASPathGetNode(cell_path, n->i + 0)); // Cell node containing 'n'
+        next_ee = XEE_EXIT;
+        next_i = n->i; // the same cell node
+    } else if (n->ee == XEE_EXIT) {
+        // Get enter nodes at the next cell node
+        n1c = reinterpret_cast<xy32xy32*>(ASPathGetNode(cell_path, n->i + 0)); // Cell node containing 'n'
+        n2c = reinterpret_cast<xy32xy32*>(ASPathGetNode(cell_path, n->i + 1)); // Next Cell node
+        next_ee = XEE_ENTER;
+        next_i = n->i + 1; // the next cell node
+    } else {
+        std::cerr << "Corrupted ee" << std::endl;
+        abort();
+    }
+    const bool add_nearest_only = !(n->i == 0 && n->ee == XEE_ENTER);
+    AddNeighborByRectRelation(n1c,
+                              n2c,
+                              neighbors,
+                              n,
+                              pws,
+                              next_i,
+                              next_ee,
+                              add_nearest_only,
+                              RTreePixelPathNodeNeighborsSuboptimal);
 }
 
 float RTreePixelPathNodeHeuristic(void *fromNode, void *toNode, void *context) {
@@ -320,7 +437,7 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
     ASPathNodeSource PathNodeSource =
     {
         sizeof(xy32ib),
-        RTreePixelPathNodeNeighbors,
+        RTreePixelPathNodeNeighborsSuboptimal,
         RTreePixelPathNodeHeuristic,
         NULL,
         RTreePixelPathNodeComparator
@@ -447,7 +564,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
     rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
     if (find_nearest_point_if_empty(rtree_ptr, from, from_box, from_result_s)) {
         std::cout << boost::format("  'From' point changed to (%1%,%2%)\n")
-            % from.x 
+            % from.x
             % from.y;
     }
 
