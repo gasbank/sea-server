@@ -204,6 +204,9 @@ void sea::update(float delta_time) {
 }
 
 void sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
+    if (!r) {
+        return;
+    }
     auto finished = false;
     auto pos = r->get_pos(finished);
     auto state = get_object_state(id);

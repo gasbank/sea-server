@@ -3,7 +3,7 @@
 #include "xy.hpp"
 
 #define SEAPORT_RTREE_FILENAME "rtree/seaport.dat"
-#define SEAPORT_RTREE_MMAP_MAX_SIZE (7 * 1024 * 1024)
+#define SEAPORT_RTREE_MMAP_MAX_SIZE (4 * 1024 * 1024)
 
 using namespace ss;
 
@@ -38,8 +38,8 @@ std::vector<seaport_object_public::value_t> seaport::query_tree(int xc, int yc, 
 }
 
 typedef struct _LWTTLDATA_SEAPORT {
-    char locode[8];
-    char name[64];
+    char name[80]; // maximum length from crawling data: 65
+    char locode[8]; // fixed length of 5
     float lat;
     float lng;
 } LWTTLDATA_SEAPORT;

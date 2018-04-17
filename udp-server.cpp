@@ -37,13 +37,13 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     route_map_[id1] = create_route({
         "Onsan/Ulsan",
         "Busan",
-        "BusanNewPort",
+        "Busan New Port",
         "Anjeong",
         "Tongyeong" });
 
     route_map_[id2] = create_route({
         "Busan",
-        "SouthBusan" });
+        "South Busan" });
 
     route_map_[id3] = create_route({
         "Tongyeong",
@@ -58,9 +58,9 @@ udp_server::udp_server(boost::asio::io_service & io_service,
         "Nokdongsin" });
 
     // Too slow to debug on Visual Studio...
-    //route_map_[id6] = create_route({
-    //    "Onsan/Ulsan",
-    //    "Yokohama" });
+    route_map_[id6] = create_route({
+        "Onsan/Ulsan",
+        "Yokohama" });
 
     std::cout << "Route setup completed." << std::endl;
 
@@ -183,6 +183,29 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
     }
 }
 
+void udp_server::send_track_object_coords(int track_object_id) {
+    auto obj = sea_->get_object(track_object_id);
+    if (obj) {
+        boost::shared_ptr<LWPTTLTRACKCOORDS> reply(new LWPTTLTRACKCOORDS);
+        memset(reply.get(), 0, sizeof(LWPTTLTRACKCOORDS));
+        reply->type = 113; // LPGP_LWPTTLTRACKCOORDS
+        reply->id = track_object_id;
+        obj->get_xy(reply->x, reply->y);
+        char compressed[1500];
+        int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLTRACKCOORDS), static_cast<int>(boost::size(compressed)));
+        if (compressed_size > 0) {
+            socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                                  remote_endpoint_,
+                                  boost::bind(&udp_server::handle_send,
+                                              this,
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred));
+        } else {
+            std::cerr << boost::format("send_track_object_coords: LZ4_compress_default() error! - %1%\n") % compressed_size;
+        }
+    }
+}
+
 void udp_server::send_seaport(float xc, float yc, float ex) {
     auto sop_list = seaport_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2));
 
@@ -220,18 +243,22 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
         if (type == 110) {
             // LPGP_LWPTTLPING
             //std::cout << "PING received." << std::endl;
-            unsigned char padding0 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x01); // padding0
-            unsigned char padding1 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x02); // padding1
-            unsigned char padding2 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x03); // padding2
+            unsigned char padding0 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x01);
+            unsigned char padding1 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x02);
+            unsigned char padding2 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x03);
             float xc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x04); // x center
             float yc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x08); // y center
             float ex = *reinterpret_cast<float*>(recv_buffer_.data() + 0x0c); // extent
-            int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10); // ping_seq
+            int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10);
+            int track_object_id = *reinterpret_cast<int*>(recv_buffer_.data() + 0x14);
 
             send_full_state(xc, yc, ex);
             if (ping_seq % 64 == 0) {
                 send_static_state(xc, yc, ex);
                 send_seaport(xc, yc, ex);
+            }
+            if (track_object_id) {
+                send_track_object_coords(track_object_id);
             }
             //std::cout << "STATE replied." << std::endl;
         }

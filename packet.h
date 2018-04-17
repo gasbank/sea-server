@@ -49,3 +49,12 @@ typedef struct _LWPTTLSEAPORTSTATE {
     LWPTTLSEAPORTOBJECT obj[200];
 } LWPTTLSEAPORTSTATE;
 
+typedef struct _LWPTTLTRACKCOORDS {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    int id;
+    float x;
+    float y;
+} LWPTTLTRACKCOORDS;

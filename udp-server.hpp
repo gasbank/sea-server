@@ -23,6 +23,7 @@ namespace ss {
         void send_full_state(float xc, float yc, float ex);
         void send_static_state(float xc, float yc, float ex);
         void send_seaport(float xc, float yc, float ex);
+        void send_track_object_coords(int track_object_id);
 
         // How to test handle_receive():
         // $ perl -e "print pack('ff',10.123,20.456)" > /dev/udp/127.0.0.1/3100
