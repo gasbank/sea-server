@@ -7,6 +7,7 @@
 #include "route.hpp"
 #include "xy.hpp"
 #include "packet.h"
+#include "region.hpp"
 
 using namespace ss;
 
@@ -16,12 +17,14 @@ const auto update_interval = boost::posix_time::milliseconds(75);
 udp_server::udp_server(boost::asio::io_service & io_service,
                        std::shared_ptr<sea> sea,
                        std::shared_ptr<sea_static> sea_static,
-                       std::shared_ptr<seaport> seaport)
+                       std::shared_ptr<seaport> seaport,
+                       std::shared_ptr<region> region)
     : socket_(io_service, udp::endpoint(udp::v4(), 3100))
     , timer_(io_service, update_interval)
     , sea_(sea)
     , sea_static_(sea_static)
     , seaport_(seaport)
+    , region_(region)
     , tick_seq_(0) {
     auto spawn_point = seaport_->get_seaport_point("Busan");
     auto spawn_point_x = static_cast<float>(spawn_point.get<0>());
@@ -247,6 +250,28 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
     }
 }
 
+void udp_server::send_seaarea(float xc, float yc) {
+    std::string area_name;
+    region_->query_tree(xc, yc, area_name);
+
+    boost::shared_ptr<LWPTTLSEAAREA> reply(new LWPTTLSEAAREA);
+    memset(reply.get(), 0, sizeof(LWPTTLSEAAREA));
+    reply->type = 114; // LPGP_LWPTTLSEAAREA
+    strcpy(reply->name, area_name.c_str());
+    char compressed[1500];
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSEAAREA), static_cast<int>(boost::size(compressed)));
+    if (compressed_size > 0) {
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                              remote_endpoint_,
+                              boost::bind(&udp_server::handle_send,
+                                          this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    } else {
+        std::cerr << boost::format("send_seaarea: LZ4_compress_default() error! - %1%\n") % compressed_size;
+    }
+}
+
 void udp_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
         unsigned char type = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x00); // type
@@ -266,6 +291,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             if (ping_seq % 64 == 0) {
                 send_static_state(xc, yc, ex);
                 send_seaport(xc, yc, ex);
+                send_seaarea(xc, yc);
             }
             if (track_object_id) {
                 send_track_object_coords(track_object_id);

@@ -8,6 +8,7 @@ namespace ss {
     class sea_static;
     class seaport;
     class route;
+    class region;
 
     class udp_server {
 
@@ -15,7 +16,8 @@ namespace ss {
         udp_server(boost::asio::io_service& io_service,
                    std::shared_ptr<sea> sea,
                    std::shared_ptr<sea_static> sea_static,
-                   std::shared_ptr<seaport> seaport);
+                   std::shared_ptr<seaport> seaport,
+                   std::shared_ptr<region> region);
         void set_route(int id, const std::string& seaport1, const std::string& seaport2);
     private:
         void update();
@@ -24,6 +26,7 @@ namespace ss {
         void send_static_state(float xc, float yc, float ex);
         void send_seaport(float xc, float yc, float ex);
         void send_track_object_coords(int track_object_id);
+        void send_seaarea(float xc, float yc);
 
         // How to test handle_receive():
         // $ perl -e "print pack('ff',10.123,20.456)" > /dev/udp/127.0.0.1/3100
@@ -43,6 +46,7 @@ namespace ss {
         std::shared_ptr<sea> sea_;
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
+        std::shared_ptr<region> region_;
         std::unordered_map<int, std::shared_ptr<route> > route_map_;
         int tick_seq_;
     };

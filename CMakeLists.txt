@@ -72,7 +72,12 @@ astarrtree.cpp
 astarrtree.hpp
 xy.hpp
 route.hpp
-route.cpp)
+route.cpp
+region.hpp
+region.cpp
+seaarea.hpp
+seaarea.cpp
+)
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE( sea-server ${ServerSources} AStar.c AStar.h)

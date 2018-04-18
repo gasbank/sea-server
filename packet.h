@@ -58,3 +58,11 @@ typedef struct _LWPTTLTRACKCOORDS {
     float x;
     float y;
 } LWPTTLTRACKCOORDS;
+
+typedef struct _LWPTTLSEAAREA {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    char name[128];
+} LWPTTLSEAAREA;

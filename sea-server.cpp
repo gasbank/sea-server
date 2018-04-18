@@ -5,6 +5,7 @@
 #include "udp-admin-server.hpp"
 #include "sea_static.hpp"
 #include "seaport.hpp"
+#include "region.hpp"
 
 using namespace ss;
 
@@ -32,7 +33,8 @@ int main() {
         sea_instance->populate_test();
         std::shared_ptr<sea_static> sea_static_instance(new sea_static());
         std::shared_ptr<seaport> seaport_instance(new seaport());
-        udp_server udp_server_instance(io_service, sea_instance, sea_static_instance, seaport_instance);
+        std::shared_ptr<region> region_instance(new region());
+        udp_server udp_server_instance(io_service, sea_instance, sea_static_instance, seaport_instance, region_instance);
         tcp_server tcp_server_instance(io_service);
         udp_admin_server udp_admin_server(io_service,
                                           sea_instance,
