@@ -11,7 +11,7 @@ namespace ss {
     class region {
     public:
         region();
-        bool region::query_tree(float lng, float lat, std::string& name) const;
+        bool query_tree(float lng, float lat, std::string& name) const;
     private:
         seaarea seaarea_;
         seaarea eezland_;
