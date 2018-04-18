@@ -1,11 +1,7 @@
-/build
+/build/
+/build-x64/
 cmake-build-debug
 /rtree/worldmap_static.dat
 /rtree/seaport.dat
 /rtree/*.dat
-/crawler/.idea/workspace.xml
-/modis/tif
-/modis/*.pyc
-/modis/__pycache__
-/build-x64/
 /rtree/*.bin
