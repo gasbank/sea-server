@@ -8,7 +8,7 @@
 #define WORLDMAP_LAND_MAX_RECT_RTREE_RTREE_FILENAME "worldmap_land_max_rect.dat"
 #define WORLDMAP_LAND_MAX_RECT_RTREE_MMAP_MAX_SIZE WORLDMAP_RTREE_MMAP_MAX_SIZE(300)
 #define WORLDMAP_WATER_MAX_RECT_RTREE_RTREE_FILENAME "worldmap_water_max_rect.dat"
-#define WORLDMAP_WATER_MAX_RECT_RTREE_MMAP_MAX_SIZE WORLDMAP_RTREE_MMAP_MAX_SIZE(10)
+#define WORLDMAP_WATER_MAX_RECT_RTREE_MMAP_MAX_SIZE WORLDMAP_RTREE_MMAP_MAX_SIZE(300)
 
 using namespace ss;
 
@@ -81,10 +81,6 @@ sea_static::sea_static()
 
     load_from_dump_if_empty(land_rtree_ptr, "rtree/land_raw_xy32xy32.bin");
     load_from_dump_if_empty(water_rtree_ptr, "rtree/water_raw_xy32xy32.bin");
-
-    xy32 from = { 14065, 2496 };
-    xy32 to = { 14043, 2512 };
-    astarrtree::astar_rtree_memory(water_rtree_ptr, from, to);
 }
 
 std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const xy32 & to) const {

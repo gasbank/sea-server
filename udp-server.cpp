@@ -58,14 +58,15 @@ udp_server::udp_server(boost::asio::io_service & io_service,
         "Onsan/Ulsan",
         "Nokdongsin" });
 
-    // Too slow to debug on Visual Studio...
+    // Too slow in 'Debug' mode...
     route_map_[id6] = create_route({
         "Onsan/Ulsan",
         "Yokohama" });
 
-    route_map_[id7] = create_route({
-        "Pilottown",
-        "Yokohama" });
+    // Too slow even in 'Release' mode...
+    //route_map_[id7] = create_route({
+    //    "Pilottown",
+    //    "Yokohama" });
 
     route_map_[id8] = create_route({
         "Yokohama",

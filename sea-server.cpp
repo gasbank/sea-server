@@ -31,9 +31,6 @@ int main() {
         std::shared_ptr<sea> sea_instance(new sea());
         sea_instance->populate_test();
         std::shared_ptr<sea_static> sea_static_instance(new sea_static());
-        float lng = 129.393312911405f; // Ulsan
-        float lat = 35.4739403188175f;
-        auto sop_list = sea_static_instance->query_near_lng_lat_to_packet(lng, lat, 32);
         std::shared_ptr<seaport> seaport_instance(new seaport());
         udp_server udp_server_instance(io_service, sea_instance, sea_static_instance, seaport_instance);
         tcp_server tcp_server_instance(io_service);
