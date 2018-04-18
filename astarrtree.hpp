@@ -20,4 +20,5 @@ namespace astarrtree {
     void astar_rtree(const char* output, size_t output_max_size, xy32 from, xy32 to);
     std::vector<xy32> astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, xy32 to);
     box_t box_t_from_xy(xy32 v);
+    bool find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box_t& from_box, std::vector<value_t>& from_result_s);
 }

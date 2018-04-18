@@ -482,7 +482,7 @@ void astarrtree::astar_rtree(const char* rtree_filename, size_t output_max_size,
     astar_rtree_memory(rtree_ptr, from, to);
 }
 
-bool find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box_t& from_box, std::vector<value_t>& from_result_s) {
+bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box_t& from_box, std::vector<value_t>& from_result_s) {
     if (from_result_s.size() == 0) {
         auto nearest_it = rtree_ptr->qbegin(bgi::nearest(from_box, 1));
         if (nearest_it == rtree_ptr->qend()) {
@@ -562,7 +562,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
     auto from_box = box_t_from_xy(from);
     std::vector<value_t> from_result_s;
     rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
-    if (find_nearest_point_if_empty(rtree_ptr, from, from_box, from_result_s)) {
+    if (astarrtree::find_nearest_point_if_empty(rtree_ptr, from, from_box, from_result_s)) {
         std::cout << boost::format("  'From' point changed to (%1%,%2%)\n")
             % from.x
             % from.y;
@@ -571,7 +571,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
     auto to_box = box_t_from_xy(to);
     std::vector<value_t> to_result_s;
     rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
-    if (find_nearest_point_if_empty(rtree_ptr, to, to_box, to_result_s)) {
+    if (astarrtree::find_nearest_point_if_empty(rtree_ptr, to, to_box, to_result_s)) {
         std::cout << boost::format("  'To' point changed to (%1%,%2%)\n")
             % to.x
             % to.y;

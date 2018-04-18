@@ -13,9 +13,11 @@ namespace ss {
         std::vector<xy32> calculate_waypoints(const xy32& from, const xy32& to) const;
         std::vector<xy32> calculate_waypoints(const sea_static_object_public::point_t& from, const sea_static_object_public::point_t& to) const;
         bool is_water(const xy32& cell) const;
+        bool is_sea_water(const xy32& cell) const;
     private:
         std::vector<sea_static_object_public> query_near_to_packet(int xc, int yc, int halfex) const; 
         std::vector<sea_static_object_public::value_t> query_tree(int xc, int yc, int halfex) const;
+        void mark_sea_water(sea_static_object_public::rtree_t* rtree);
         int lng_to_xc(float lng) const;
         int lat_to_yc(float lat) const;
         bi::managed_mapped_file land_file;
@@ -24,8 +26,15 @@ namespace ss {
         bi::managed_mapped_file water_file;
         sea_static_object_public::allocator_t water_alloc;
         sea_static_object_public::rtree_t* water_rtree_ptr;
+
+        //bi::managed_mapped_file sea_water_set_file;
+        //sea_static_object_public::allocator_t sea_water_set_alloc;
+
         const int res_width;
         const int res_height;
         const float km_per_cell;
+        //typedef std::unordered_set<int, std::hash<int>, std::equal_to<int>, sea_static_object_public::allocator_t> sea_water_set_t;
+        //sea_water_set_t* sea_water_set;
+        std::vector<int> sea_water_vector;
     };
 }

@@ -9,6 +9,8 @@
 #define WORLDMAP_LAND_MAX_RECT_RTREE_MMAP_MAX_SIZE WORLDMAP_RTREE_MMAP_MAX_SIZE(300)
 #define WORLDMAP_WATER_MAX_RECT_RTREE_RTREE_FILENAME "worldmap_water_max_rect.dat"
 #define WORLDMAP_WATER_MAX_RECT_RTREE_MMAP_MAX_SIZE WORLDMAP_RTREE_MMAP_MAX_SIZE(300)
+#define SEA_WATER_SET_FILENAME "sea_water_set.dat"
+#define SEA_WATER_SET_MMAP_MAX_SIZE WORLDMAP_RTREE_MMAP_MAX_SIZE(90)
 
 using namespace ss;
 
@@ -68,6 +70,59 @@ void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const
     }
 }
 
+void sea_static::mark_sea_water(sea_static_object_public::rtree_t* rtree) {
+    const char* sea_water_dump_filename = "rtree/sea_water_dump.dat";
+    std::cout << boost::format("Checking %1%...\n") % sea_water_dump_filename;
+    struct stat stat_buffer;
+    if (stat(sea_water_dump_filename, &stat_buffer) != 0) {
+        std::unordered_set<int> sea_water_set;
+        std::cout << boost::format("%1% not exists. Creating...\n") % sea_water_dump_filename;
+        std::cout << boost::format("R-tree total node: %1%\n")
+            % rtree->size();
+        std::vector<sea_static_object_public::rtree_t::const_query_iterator> open_set;
+        for (auto it = rtree->qbegin(bgi::intersects(astarrtree::box_t_from_xy(xy32{ 0,0 }))); it != rtree->qend(); it++) {
+            sea_water_set.insert(it->second);
+            open_set.push_back(it);
+        }
+        std::unordered_set<int> visited_set;
+        while (open_set.size() > 0) {
+            std::vector<sea_static_object_public::rtree_t::const_query_iterator> next_open_set;
+            for (auto open_it : open_set) {
+                for (auto it = rtree->qbegin(bgi::intersects(open_it->first)); it != rtree->qend(); it++) {
+                    if (visited_set.find(it->second) == visited_set.end()) {
+                        visited_set.insert(it->second);
+                        sea_water_set.insert(it->second);
+                        next_open_set.push_back(it);
+                    }
+                }
+            }
+            open_set = next_open_set;
+            std::cout << boost::format("Sea water set size: %1% (%2% %%)\n")
+                % sea_water_set.size()
+                % ((float)sea_water_set.size() / rtree->size() * 100.0f);
+        }
+        sea_water_vector.assign(sea_water_set.begin(), sea_water_set.end());
+        std::sort(sea_water_vector.begin(), sea_water_vector.end());
+        FILE* sea_water_dump_file = fopen(sea_water_dump_filename, "wb");
+        fwrite(&sea_water_vector[0], sizeof(int), sea_water_vector.size(), sea_water_dump_file);
+        fclose(sea_water_dump_file);
+        sea_water_dump_file = 0;
+    } else {
+        size_t count = stat_buffer.st_size / sizeof(int);
+        std::cout << boost::format("Sea water dump count: %1%\n")
+            % count;
+        FILE* sea_water_dump_file = fopen(sea_water_dump_filename, "rb");
+        //std::vector<int> sea_water_vector(count);
+        sea_water_vector.resize(count);
+        fread(&sea_water_vector[0], sizeof(int), sea_water_vector.size(), sea_water_dump_file);
+        std::cout << boost::format("Sea water vector count: %1%\n")
+            % sea_water_vector.size();
+        /*sea_water_set.insert(sea_water_vector.begin(), sea_water_vector.end());
+        std::cout << boost::format("Sea water set count: %1%\n")
+            % sea_water_set.size();*/
+    }
+}
+
 sea_static::sea_static()
     : land_file(bi::open_or_create, DATA_ROOT WORLDMAP_LAND_MAX_RECT_RTREE_RTREE_FILENAME, WORLDMAP_LAND_MAX_RECT_RTREE_MMAP_MAX_SIZE)
     , land_alloc(land_file.get_segment_manager())
@@ -77,14 +132,62 @@ sea_static::sea_static()
     , water_rtree_ptr(water_file.find_or_construct<sea_static_object_public::rtree_t>("rtree")(sea_static_object_public::params_t(), sea_static_object_public::indexable_t(), sea_static_object_public::equal_to_t(), water_alloc))
     , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
     , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
-    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width) {
-
+    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
+    //, sea_water_set_file(bi::open_or_create, DATA_ROOT SEA_WATER_SET_FILENAME, SEA_WATER_SET_MMAP_MAX_SIZE)
+    //, sea_water_set_alloc(sea_water_set_file.get_segment_manager())
+    //, sea_water_set(sea_water_set_file.find_or_construct<sea_water_set_t>("set")(int(), std::hash<int>(), std::equal_to<int>(), sea_water_set_alloc))
+{
+    
     load_from_dump_if_empty(land_rtree_ptr, "rtree/land_raw_xy32xy32.bin");
     load_from_dump_if_empty(water_rtree_ptr, "rtree/water_raw_xy32xy32.bin");
+    mark_sea_water(water_rtree_ptr);
 }
 
 std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const xy32 & to) const {
-    return astarrtree::astar_rtree_memory(water_rtree_ptr, from, to);
+    auto from_box = astarrtree::box_t_from_xy(from);
+    std::vector<astarrtree::value_t> from_result_s;
+    water_rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
+    xy32 new_from = from;
+    bool new_from_sea_water = false;
+    if (astarrtree::find_nearest_point_if_empty(water_rtree_ptr, new_from, from_box, from_result_s)) {
+        new_from_sea_water = is_sea_water(xy32{ new_from.x, new_from.y });
+        std::cout << boost::format("  'From' point changed to (%1%,%2%) [sea water=%3%]\n")
+            % new_from.x
+            % new_from.y
+            % new_from_sea_water;
+    } else {
+        new_from_sea_water = is_sea_water(xy32{ new_from.x, new_from.y });
+        std::cout << boost::format("  'From' point (%1%,%2%) [sea water=%3%]\n")
+            % new_from.x
+            % new_from.y
+            % new_from_sea_water;
+    }
+    
+    auto to_box = astarrtree::box_t_from_xy(to);
+    std::vector<astarrtree::value_t> to_result_s;
+    water_rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
+    xy32 new_to = to;
+    bool new_to_sea_water = false;
+    if (astarrtree::find_nearest_point_if_empty(water_rtree_ptr, new_to, to_box, to_result_s)) {
+        new_to_sea_water = is_sea_water(xy32{ new_to.x, new_to.y });
+        std::cout << boost::format("  'To' point changed to (%1%,%2%) [sea water=%3%]\n")
+            % new_to.x
+            % new_to.y
+            % new_to_sea_water;
+    } else {
+        new_to_sea_water = is_sea_water(xy32{ new_to.x, new_to.y });
+        std::cout << boost::format("  'To' point (%1%,%2%) [sea water=%3%]\n")
+            % new_to.x
+            % new_to.y
+            % new_to_sea_water;
+    }
+
+    if (new_from_sea_water && new_to_sea_water) {
+        return astarrtree::astar_rtree_memory(water_rtree_ptr, new_from, new_to);
+    } else {
+        std::cerr << boost::format("ERROR: Both 'From' and 'To' should be in sea water to generate waypoints!\n");
+        return std::vector<xy32>();
+    }
 }
 
 std::vector<xy32> ss::sea_static::calculate_waypoints(const sea_static_object_public::point_t & from, const sea_static_object_public::point_t & to) const {
@@ -100,4 +203,13 @@ std::vector<xy32> ss::sea_static::calculate_waypoints(const sea_static_object_pu
 bool ss::sea_static::is_water(const xy32& cell) const {
     auto cell_box = astarrtree::box_t_from_xy(cell);
     return water_rtree_ptr->qbegin(bgi::contains(cell_box)) != water_rtree_ptr->qend();
+}
+
+bool ss::sea_static::is_sea_water(const xy32& cell) const {
+    auto cell_box = astarrtree::box_t_from_xy(cell);
+    auto it = water_rtree_ptr->qbegin(bgi::contains(cell_box));
+    if (it != water_rtree_ptr->qend()) {
+        return std::binary_search(sea_water_vector.begin(), sea_water_vector.end(), it->second);
+    }
+    return false;
 }
