@@ -59,18 +59,18 @@ udp_server::udp_server(boost::asio::io_service & io_service,
         "Nokdongsin" });
 
     // Too slow in 'Debug' mode...
-    route_map_[id6] = create_route({
-        "Onsan/Ulsan",
-        "Yokohama" });
+    //route_map_[id6] = create_route({
+    //    "Onsan/Ulsan",
+    //    "Yokohama" });
 
     // Too slow even in 'Release' mode...
     //route_map_[id7] = create_route({
     //    "Pilottown",
     //    "Yokohama" });
 
-    route_map_[id8] = create_route({
-        "Yokohama",
-        "Jurong/Singapore" });
+    //route_map_[id8] = create_route({
+    //    "Yokohama",
+    //    "Jurong/Singapore" });
 
     std::cout << "Route setup completed." << std::endl;
 
