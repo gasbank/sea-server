@@ -81,8 +81,8 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     timer_.async_wait(boost::bind(&udp_server::update, this));
 }
 
-void udp_server::set_route(int id, const std::string& seaport1, const std::string& seaport2) {
-    auto route = create_route({ seaport1, seaport2 });
+void udp_server::set_route(int id, int seaport_id1, int seaport_id2) {
+    auto route = create_route_id({ seaport_id1, seaport_id2 });
     if (route) {
         route_map_[id] = route;
     }
@@ -302,6 +302,30 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
     }
 }
 
+std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seaport_id_list) const {
+    if (seaport_id_list.size() == 0) {
+        return std::shared_ptr<route>();
+    }
+    std::vector<seaport_object_public::point_t> point_list;
+    for (auto v : seaport_id_list) {
+        point_list.emplace_back(seaport_->get_seaport_point(v));
+        std::cout << boost::format("Seaport ID: %1%\n") % v;
+    }
+    std::vector<xy32> wp_total;
+    for (size_t i = 0; i < point_list.size() - 1; i++) {
+        auto wp = sea_static_->calculate_waypoints(point_list[i], point_list[i + 1]);
+        if (wp.size() >= 2) {
+            std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
+        } else {
+            std::cerr << "Waypoints of less than 2 detected. Route could not be found." << std::endl;
+            return std::shared_ptr<route>();
+        }
+    }
+    std::shared_ptr<route> r(new route(wp_total));
+    r->set_velocity(1);
+    return r;
+}
+
 std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& seaport_list) const {
     if (seaport_list.size() == 0) {
         return std::shared_ptr<route>();
@@ -309,6 +333,7 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
     std::vector<seaport_object_public::point_t> point_list;
     for (auto v : seaport_list) {
         point_list.emplace_back(seaport_->get_seaport_point(v.c_str()));
+        std::cout << boost::format("Seaport: %1%\n") % v.c_str();
     }
     std::vector<xy32> wp_total;
     for (size_t i = 0; i < point_list.size() - 1; i++) {

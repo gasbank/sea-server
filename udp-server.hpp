@@ -18,7 +18,7 @@ namespace ss {
                    std::shared_ptr<sea_static> sea_static,
                    std::shared_ptr<seaport> seaport,
                    std::shared_ptr<region> region);
-        void set_route(int id, const std::string& seaport1, const std::string& seaport2);
+        void set_route(int id, int seaport_id1, int seaport_id2);
     private:
         void update();
         void start_receive();
@@ -37,6 +37,7 @@ namespace ss {
         void handle_send(const boost::system::error_code& error,
                          std::size_t bytes_transferred);
 
+        std::shared_ptr<route> create_route_id(const std::vector<int>& seaport_id_list) const;
         std::shared_ptr<route> create_route(const std::vector<std::string>& seaport_list) const;
 
         udp::socket socket_;

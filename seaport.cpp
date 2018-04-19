@@ -86,8 +86,7 @@ int seaport::get_seaport_id(const char* name) const {
     return -1;
 }
 
-seaport_object_public::point_t seaport::get_seaport_point(const char* name) const {
-    auto id = get_seaport_id(name);
+seaport_object_public::point_t seaport::get_seaport_point(int id) const {
     if (id >= 0) {
         auto cit = id_point.find(id);
         if (cit != id_point.end()) {
@@ -97,15 +96,26 @@ seaport_object_public::point_t seaport::get_seaport_point(const char* name) cons
     return seaport_object_public::point_t(-1, -1);
 }
 
-int seaport::get_nearest_two(const xy32& pos, std::string& name1, std::string& name2) const {
+seaport_object_public::point_t seaport::get_seaport_point(const char* name) const {
+    auto id = get_seaport_id(name);
+    return get_seaport_point(id);
+}
+
+int seaport::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int& id2, std::string& name2) const {
+    id1 = -1;
+    id2 = -1;
     seaport_object_public::point_t p = { boost::numeric_cast<int>(pos.x), boost::numeric_cast<int>(pos.y) };
     int count = 0;
     for (auto it = rtree_ptr->qbegin(bgi::nearest(p, 2)); it != rtree_ptr->qend(); it++) {
         if (count == 0) {
+            id1 = it->second;
             name1 = get_seaport_name(it->second);
+            std::cout << boost::format("Nearest 1: %1% (%2%,%3%)\n") % name1 % it->first.get<0>() % it->first.get<1>();
             count++;
         } else if (count == 1) {
+            id2 = it->second;
             name2 = get_seaport_name(it->second);
+            std::cout << boost::format("Nearest 2: %1% (%2%,%3%)\n") % name2 % it->first.get<0>() % it->first.get<1>();
             count++;
             return count;
         }

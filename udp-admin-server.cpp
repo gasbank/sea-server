@@ -132,9 +132,14 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             xy32 spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
             if (sea_static_->is_water(spawn_pos)) {
                 int id = sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
+                int id1, id2;
                 std::string port1, port2;
-                seaport_->get_nearest_two(spawn_pos, port1, port2);
-                udp_server_.set_route(id, port1, port2);
+                if (seaport_->get_nearest_two(spawn_pos, id1, port1, id2, port2) == 2) {
+                    std::cout << boost::format("Nearest two ports: %1%(id=%2%), %3%(id=%4%)\n") % port1 % id1 % port2 % id2;
+                    udp_server_.set_route(id, id1, id2);
+                } else {
+                    std::cerr << boost::format("Cannot get nearest two ports!");
+                }
             }
             break;
         }
