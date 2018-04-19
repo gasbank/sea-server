@@ -95,6 +95,13 @@ struct spawn_ship_command {
     float y;
 };
 
+struct spawn_ship_command_reply {
+    command _;
+    int ship_id;
+    int port1_id;
+    int port2_id;
+};
+
 void udp_admin_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
         command* cp = reinterpret_cast<command*>(recv_buffer_.data());
@@ -136,7 +143,18 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                 std::string port1, port2;
                 if (seaport_->get_nearest_two(spawn_pos, id1, port1, id2, port2) == 2) {
                     std::cout << boost::format("Nearest two ports: %1%(id=%2%), %3%(id=%4%)\n") % port1 % id1 % port2 % id2;
-                    udp_server_.set_route(id, id1, id2);
+                    if (udp_server_.set_route(id, id1, id2)) {
+                        spawn_ship_command_reply reply;
+                        memset(&reply, 0, sizeof(spawn_ship_command_reply));
+                        reply._.type = 1;
+                        reply.ship_id = spawn->id;
+                        reply.port1_id = id1;
+                        reply.port2_id = id2;
+                        socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_ship_command_reply)), remote_endpoint_,
+                                              boost::bind(&udp_admin_server::handle_send, this,
+                                                          boost::asio::placeholders::error,
+                                                          boost::asio::placeholders::bytes_transferred));
+                    }
                 } else {
                     std::cerr << boost::format("Cannot get nearest two ports!");
                 }

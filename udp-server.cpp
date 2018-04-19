@@ -81,11 +81,13 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     timer_.async_wait(boost::bind(&udp_server::update, this));
 }
 
-void udp_server::set_route(int id, int seaport_id1, int seaport_id2) {
+bool udp_server::set_route(int id, int seaport_id1, int seaport_id2) {
     auto route = create_route_id({ seaport_id1, seaport_id2 });
     if (route) {
         route_map_[id] = route;
+        return true;
     }
+    return false;
 }
 
 void udp_server::update() {
