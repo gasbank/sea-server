@@ -17,7 +17,7 @@ namespace ss {
                          std::shared_ptr<sea_static> sea_static,
                          std::shared_ptr<seaport> seaport,
                          udp_server& udp_server);
-
+        void send_recover_all_ships();
     private:
         void start_receive();
 
@@ -37,5 +37,10 @@ namespace ss {
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
         udp_server& udp_server_;
+        // sea-server -> web-server requests
+        udp::resolver resolver_;
+        udp::resolver::query web_server_query_;
+        udp::endpoint web_server_endpoint_;
+        udp::socket web_server_socket_;
     };
 }

@@ -41,6 +41,7 @@ int main() {
                                           sea_static_instance,
                                           seaport_instance,
                                           udp_server_instance);
+        udp_admin_server.send_recover_all_ships();
         io_service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

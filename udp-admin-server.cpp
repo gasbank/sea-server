@@ -38,8 +38,13 @@ udp_admin_server::udp_admin_server(boost::asio::io_service & io_service,
     , sea_(sea)
     , sea_static_(sea_static)
     , seaport_(seaport)
-    , udp_server_(udp_server) {
+    , udp_server_(udp_server)
+    , resolver_(io_service)
+    , web_server_query_(udp::v4(), "localhost", "3003")
+    , web_server_endpoint_(*resolver_.resolve(web_server_query_))
+    , web_server_socket_(io_service) {
     start_receive();
+    web_server_socket_.open(udp::v4());
 }
 
 void udp_admin_server::start_receive() {
@@ -169,4 +174,9 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
         }
         start_receive();
     }
+}
+
+void udp_admin_server::send_recover_all_ships() {
+    boost::array<char, 1> send_buf = { 2 }; // RecoverAllShips
+    web_server_socket_.send_to(boost::asio::buffer(send_buf), web_server_endpoint_);
 }
