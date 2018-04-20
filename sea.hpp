@@ -29,6 +29,7 @@ namespace ss {
         SEA_OBJECT_STATE get_object_state(int id) const;
         bool update_route(float delta_time, int id, std::shared_ptr<route> r);
         sea_object* get_object(int id);
+        sea_object* get_object_by_type(int type);
         void set_udp_admin_server(const std::shared_ptr<udp_admin_server>& uas) { this->uas = uas; }
     private:
         float lng_to_xc(float lng) const;
@@ -36,7 +37,7 @@ namespace ss {
         std::vector<int> query_tree(float xc, float yc, float ex) const;
 
         std::unordered_map<int, sea_object> sea_objects;
-        std::unordered_map<int, sea_object> sea_objects_by_type;
+        std::unordered_map<int, int> sea_object_id_by_type;
         std::unordered_map<std::string, int> sea_guid_to_id;
         bgi::rtree< value, bgi::quadratic<16> > rtree;
         const int res_width;

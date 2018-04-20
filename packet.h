@@ -5,6 +5,7 @@ typedef struct _LWPTTLFULLSTATEOBJECT {
     float x1, y1;
     float vx, vy;
     int id;
+    int type;
     char guid[64];
     float route_left;
 } LWPTTLFULLSTATEOBJECT;

@@ -60,18 +60,24 @@ int sea::spawn(int type, float x, float y, float w, float h) {
     box b(point(x, y), point(x + w, y + h));
     auto rtree_value = std::make_pair(b, id);
     sea_objects.emplace(std::pair<int, sea_object>(id, sea_object(id, type, x, y, w, h, rtree_value)));
-    sea_objects_by_type.emplace(std::pair<int, sea_object>(type, sea_object(id, type, x, y, w, h, rtree_value)));
+    sea_object_id_by_type[type] = id;
     rtree.insert(rtree_value);
     return id;
 }
 
 void sea::despawn(int type) {
-    auto it = sea_objects_by_type.find(type);
-    if (it != sea_objects_by_type.end()) {
-        rtree.remove(it->second.get_rtree_value());
-        sea_objects.erase(it->second.get_id());
-        sea_objects_by_type.erase(it);
-        it = sea_objects_by_type.end();
+    auto it = sea_object_id_by_type.find(type);
+    if (it != sea_object_id_by_type.end()) {
+        auto obj = get_object(it->second);
+        if (obj != nullptr) {
+            rtree.remove(obj->get_rtree_value());
+        } else {
+            std::cerr << boost::format("Cannot get sea object of type %1%!\n") % it->second;
+        }
+        sea_objects.erase(it->second);
+        obj = nullptr;
+        sea_object_id_by_type.erase(it);
+        it = sea_object_id_by_type.end();
     }
 }
 
@@ -118,6 +124,16 @@ void sea::set_object_state(int id, SEA_OBJECT_STATE state) {
     } else {
         std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
     }
+}
+
+sea_object* sea::get_object_by_type(int type) {
+    auto it = sea_object_id_by_type.find(type);
+    if (it != sea_object_id_by_type.end()) {
+        return get_object(it->second);
+    } else {
+        std::cerr << boost::format("Sea object ID cannot be found using type %1%\n") % type;
+    }
+    return nullptr;
 }
 
 sea_object* sea::get_object(int id) {

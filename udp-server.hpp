@@ -20,12 +20,13 @@ namespace ss {
                    std::shared_ptr<region> region);
         bool set_route(int id, int seaport_id1, int seaport_id2);
     private:
+        void make_test_route();
         void update();
         void start_receive();
         void send_full_state(float xc, float yc, float ex);
         void send_static_state(float xc, float yc, float ex);
         void send_seaport(float xc, float yc, float ex);
-        void send_track_object_coords(int track_object_id);
+        void send_track_object_coords(int track_object_id, int track_object_ship_id);
         void send_seaarea(float xc, float yc);
 
         // How to test handle_receive():

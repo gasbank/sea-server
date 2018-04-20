@@ -26,6 +26,14 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , seaport_(seaport)
     , region_(region)
     , tick_seq_(0) {
+
+    //make_test_route();
+    
+    start_receive();
+    timer_.async_wait(boost::bind(&udp_server::update, this));
+}
+
+void udp_server::make_test_route() {
     auto spawn_point = seaport_->get_seaport_point("Busan");
     auto spawn_point_x = static_cast<float>(spawn_point.get<0>());
     auto spawn_point_y = static_cast<float>(spawn_point.get<1>());
@@ -76,9 +84,6 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     //    "Jurong/Singapore" });
 
     std::cout << "Route setup completed." << std::endl;
-
-    start_receive();
-    timer_.async_wait(boost::bind(&udp_server::update, this));
 }
 
 bool udp_server::set_route(int id, int seaport_id1, int seaport_id2) {
@@ -143,6 +148,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
         reply->obj[reply_obj_index].vx = v.vx;
         reply->obj[reply_obj_index].vy = v.vy;
         reply->obj[reply_obj_index].id = v.id;
+        reply->obj[reply_obj_index].type = v.type;
         strcpy(reply->obj[reply_obj_index].guid, v.guid);
         auto it = route_map_.find(v.id);
         if (it != route_map_.end() && it->second) {
@@ -205,26 +211,40 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
     }
 }
 
-void udp_server::send_track_object_coords(int track_object_id) {
-    auto obj = sea_->get_object(track_object_id);
+void udp_server::send_track_object_coords(int track_object_id, int track_object_ship_id) {
+    sea_object* obj = nullptr;
+    if (track_object_id && track_object_ship_id) {
+        std::cerr << boost::format("track_object_id and track_object_ship_id both set. tracking ignored\n");
+        return;
+    } else if (track_object_id) {
+        obj = sea_->get_object(track_object_id);
+    } else if (track_object_ship_id) {
+        obj = sea_->get_object_by_type(track_object_ship_id);
+    }
+    if (!obj) {
+        std::cerr << boost::format("Tracking object cannot be found. (track_object_id=%1%, track_object_ship_id=%2%)\n")
+            % track_object_id
+            % track_object_ship_id;
+    }
+    boost::shared_ptr<LWPTTLTRACKCOORDS> reply(new LWPTTLTRACKCOORDS);
+    memset(reply.get(), 0, sizeof(LWPTTLTRACKCOORDS));
+    reply->type = 113; // LPGP_LWPTTLTRACKCOORDS
+    reply->id = obj ? (track_object_id ? track_object_id : track_object_ship_id ? track_object_ship_id : 0) : 0;
     if (obj) {
-        boost::shared_ptr<LWPTTLTRACKCOORDS> reply(new LWPTTLTRACKCOORDS);
-        memset(reply.get(), 0, sizeof(LWPTTLTRACKCOORDS));
-        reply->type = 113; // LPGP_LWPTTLTRACKCOORDS
-        reply->id = track_object_id;
         obj->get_xy(reply->x, reply->y);
-        char compressed[1500];
-        int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLTRACKCOORDS), static_cast<int>(boost::size(compressed)));
-        if (compressed_size > 0) {
-            socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
-                                  remote_endpoint_,
-                                  boost::bind(&udp_server::handle_send,
-                                              this,
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred));
-        } else {
-            std::cerr << boost::format("send_track_object_coords: LZ4_compress_default() error! - %1%\n") % compressed_size;
-        }
+    }
+    char compressed[1500];
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLTRACKCOORDS), static_cast<int>(boost::size(compressed)));
+    if (compressed_size > 0) {
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                              remote_endpoint_,
+                              boost::bind(&udp_server::handle_send,
+                                          this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    } else {
+        std::cerr << boost::format("send_track_object_coords: LZ4_compress_default() error! - %1%\n")
+            % compressed_size;
     }
 }
 
@@ -295,6 +315,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             float ex = *reinterpret_cast<float*>(recv_buffer_.data() + 0x0c); // extent
             int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10);
             int track_object_id = *reinterpret_cast<int*>(recv_buffer_.data() + 0x14);
+            int track_object_ship_id = *reinterpret_cast<int*>(recv_buffer_.data() + 0x18);
 
             send_full_state(xc, yc, ex);
             if (ping_seq % 64 == 0) {
@@ -302,8 +323,8 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                 send_seaport(xc, yc, ex);
                 send_seaarea(xc, yc);
             }
-            if (track_object_id) {
-                send_track_object_coords(track_object_id);
+            if (track_object_id || track_object_ship_id) {
+                send_track_object_coords(track_object_id, track_object_ship_id);
             }
             //std::cout << "STATE replied." << std::endl;
         }
