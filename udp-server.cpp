@@ -30,13 +30,13 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     auto spawn_point_x = static_cast<float>(spawn_point.get<0>());
     auto spawn_point_y = static_cast<float>(spawn_point.get<1>());
     auto id1 = sea_->spawn("Test A", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id2 = sea_->spawn("Test B", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id3 = sea_->spawn("Test C", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id4 = sea_->spawn("Test D", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id5 = sea_->spawn("Test E", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id6 = sea_->spawn("Test F", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id7 = sea_->spawn("Test G", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id8 = sea_->spawn("Test H", 1, spawn_point_x, spawn_point_y, 1, 1);
+    auto id2 = sea_->spawn("Test B", 2, spawn_point_x, spawn_point_y, 1, 1);
+    auto id3 = sea_->spawn("Test C", 3, spawn_point_x, spawn_point_y, 1, 1);
+    auto id4 = sea_->spawn("Test D", 4, spawn_point_x, spawn_point_y, 1, 1);
+    auto id5 = sea_->spawn("Test E", 5, spawn_point_x, spawn_point_y, 1, 1);
+    auto id6 = sea_->spawn("Test F", 6, spawn_point_x, spawn_point_y, 1, 1);
+    auto id7 = sea_->spawn("Test G", 7, spawn_point_x, spawn_point_y, 1, 1);
+    auto id8 = sea_->spawn("Test H", 8, spawn_point_x, spawn_point_y, 1, 1);
 
     route_map_[id1] = create_route({
         "Onsan/Ulsan",
@@ -58,7 +58,7 @@ udp_server::udp_server(boost::asio::io_service & io_service,
         "Yeosu" });
 
     route_map_[id5] = create_route({
-        "Onsan/Ulsan",
+        "Yokohama",
         "Nokdongsin" });
 
     // Too slow in 'Debug' mode...
@@ -98,8 +98,15 @@ void udp_server::update() {
 
     float delta_time = update_interval.total_milliseconds() / 1000.0f;
     sea_->update(delta_time);
+    std::vector<int> remove_keys;
     for (auto v : route_map_) {
-        sea_->update_route(delta_time, v.first, v.second);
+        if (sea_->update_route(delta_time, v.first, v.second) == false) {
+            // no more valid 'v'
+            remove_keys.push_back(v.first);
+        }
+    }
+    for (auto v : remove_keys) {
+        route_map_.erase(v);
     }
 }
 

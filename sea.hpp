@@ -5,6 +5,7 @@ namespace ss {
     namespace bg = boost::geometry;
     namespace bgi = boost::geometry::index;
     class route;
+    class udp_admin_server;
 
     class sea {
         typedef bg::model::point<float, 2, bg::cs::cartesian> point;
@@ -16,6 +17,7 @@ namespace ss {
         void populate_test();
         int spawn(int type, float x, float y, float w, float h);
         int spawn(const char* guid, int type, float x, float y, float w, float h);
+        void despawn(int type);
         void travel_to(const char* guid, float x, float y, float v = 1.0f);
         void teleport_to(int id, float x, float y, float vx = 0, float vy = 0);
         void teleport_to(const char* guid, float x, float y, float vx = 0, float vy = 0);
@@ -25,19 +27,22 @@ namespace ss {
         void update(float delta_time);
         void set_object_state(int id, SEA_OBJECT_STATE state);
         SEA_OBJECT_STATE get_object_state(int id) const;
-        void update_route(float delta_time, int id, std::shared_ptr<route> r);
+        bool update_route(float delta_time, int id, std::shared_ptr<route> r);
         sea_object* get_object(int id);
+        void set_udp_admin_server(const std::shared_ptr<udp_admin_server>& uas) { this->uas = uas; }
     private:
         float lng_to_xc(float lng) const;
         float lat_to_yc(float lat) const;
         std::vector<int> query_tree(float xc, float yc, float ex) const;
 
         std::unordered_map<int, sea_object> sea_objects;
+        std::unordered_map<int, sea_object> sea_objects_by_type;
         std::unordered_map<std::string, int> sea_guid_to_id;
         bgi::rtree< value, bgi::quadratic<16> > rtree;
         const int res_width;
         const int res_height;
         const float km_per_cell;
         int tick_seq;
+        std::shared_ptr<udp_admin_server> uas;
     };
 }

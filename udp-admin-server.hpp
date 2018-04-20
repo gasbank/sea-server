@@ -18,6 +18,7 @@ namespace ss {
                          std::shared_ptr<seaport> seaport,
                          udp_server& udp_server);
         void send_recover_all_ships();
+        void send_arrival(int ship_id);
     private:
         void start_receive();
 

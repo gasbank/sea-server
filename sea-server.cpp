@@ -26,7 +26,7 @@ int main() {
         if (cwd.empty()) {
             abort();
         }
-        
+
         std::cout << "Current path: " << boost::filesystem::current_path() << std::endl;
         boost::asio::io_service io_service;
         std::shared_ptr<sea> sea_instance(new sea());
@@ -36,12 +36,13 @@ int main() {
         std::shared_ptr<region> region_instance(new region());
         udp_server udp_server_instance(io_service, sea_instance, sea_static_instance, seaport_instance, region_instance);
         tcp_server tcp_server_instance(io_service);
-        udp_admin_server udp_admin_server(io_service,
-                                          sea_instance,
-                                          sea_static_instance,
-                                          seaport_instance,
-                                          udp_server_instance);
-        udp_admin_server.send_recover_all_ships();
+        std::shared_ptr<udp_admin_server> udp_admin_server_instance(new udp_admin_server(io_service,
+                                                                                         sea_instance,
+                                                                                         sea_static_instance,
+                                                                                         seaport_instance,
+                                                                                         udp_server_instance));
+        sea_instance->set_udp_admin_server(udp_admin_server_instance);
+        udp_admin_server_instance->send_recover_all_ships();
         io_service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

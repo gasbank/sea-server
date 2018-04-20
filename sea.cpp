@@ -1,6 +1,7 @@
 #include "precompiled.hpp"
 #include "sea.hpp"
 #include "route.hpp"
+#include "udp-admin-server.hpp"
 using namespace ss;
 
 sea::sea()
@@ -59,8 +60,19 @@ int sea::spawn(int type, float x, float y, float w, float h) {
     box b(point(x, y), point(x + w, y + h));
     auto rtree_value = std::make_pair(b, id);
     sea_objects.emplace(std::pair<int, sea_object>(id, sea_object(id, type, x, y, w, h, rtree_value)));
+    sea_objects_by_type.emplace(std::pair<int, sea_object>(type, sea_object(id, type, x, y, w, h, rtree_value)));
     rtree.insert(rtree_value);
     return id;
+}
+
+void sea::despawn(int type) {
+    auto it = sea_objects_by_type.find(type);
+    if (it != sea_objects_by_type.end()) {
+        rtree.remove(it->second.get_rtree_value());
+        sea_objects.erase(it->second.get_id());
+        sea_objects_by_type.erase(it);
+        it = sea_objects_by_type.end();
+    }
 }
 
 void sea::travel_to(const char* guid, float x, float y, float v) {
@@ -203,13 +215,17 @@ void sea::update(float delta_time) {
     }
 }
 
-void sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
+bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
     if (!r) {
-        return;
+        // nothing to do
+        return true;
     }
     auto finished = false;
     auto pos = r->get_pos(finished);
     auto state = get_object_state(id);
+    if (state == SOS_ERROR) {
+        return false;
+    }
     if (state == SOS_SAILING) {
         r->update(delta_time);
         auto dlen = sqrtf(pos.second.first * pos.second.first + pos.second.second * pos.second.second);
@@ -224,6 +240,8 @@ void sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
         obj->set_state(SOS_LOADING);
         obj->set_velocity(0, 0);
         obj->set_remain_loading_time(5.0f);
+        uas->send_arrival(obj->get_type());
         r->reverse();
     }
+    return true;
 }

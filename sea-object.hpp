@@ -104,6 +104,8 @@ namespace ss {
                 }
             }
         }
+        int get_type() const { return type; }
+        int get_id() const { return id; }
     private:
         explicit sea_object() {}
         int id;
