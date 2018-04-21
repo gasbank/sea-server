@@ -59,7 +59,7 @@ int sea::spawn(int type, float x, float y, float w, float h) {
     int id = static_cast<int>(sea_objects.size()) + 1;
     box b(point(x, y), point(x + w, y + h));
     auto rtree_value = std::make_pair(b, id);
-    sea_objects.emplace(std::pair<int, sea_object>(id, sea_object(id, type, x, y, w, h, rtree_value)));
+    sea_objects.emplace(std::make_pair(id, sea_object(id, type, x, y, w, h, rtree_value)));
     sea_object_id_by_type[type] = id;
     rtree.insert(rtree_value);
     return id;
