@@ -14,12 +14,12 @@ namespace ss {
         std::vector<xy32> calculate_waypoints(const sea_static_object_public::point_t& from, const sea_static_object_public::point_t& to) const;
         bool is_water(const xy32& cell) const;
         bool is_sea_water(const xy32& cell) const;
+        int lng_to_xc(float lng) const;
+        int lat_to_yc(float lat) const;
     private:
         std::vector<sea_static_object_public> query_near_to_packet(int xc, int yc, int halfex) const; 
         std::vector<sea_static_object_public::value_t> query_tree(int xc, int yc, int halfex) const;
         void mark_sea_water(sea_static_object_public::rtree_t* rtree);
-        int lng_to_xc(float lng) const;
-        int lat_to_yc(float lat) const;
         bi::managed_mapped_file land_file;
         sea_static_object_public::allocator_t land_alloc;
         sea_static_object_public::rtree_t* land_rtree_ptr;

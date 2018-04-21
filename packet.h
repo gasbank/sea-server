@@ -1,5 +1,9 @@
 #pragma once
 
+/*
+* BEGIN: should sync with packet.h in sea-server
+*/
+// UDP
 typedef struct _LWPTTLFULLSTATEOBJECT {
     float x0, y0;
     float x1, y1;
@@ -10,6 +14,7 @@ typedef struct _LWPTTLFULLSTATEOBJECT {
     float route_left;
 } LWPTTLFULLSTATEOBJECT;
 
+// UDP
 typedef struct _LWPTTLFULLSTATE {
     unsigned char type;
     unsigned char padding0;
@@ -19,6 +24,7 @@ typedef struct _LWPTTLFULLSTATE {
     LWPTTLFULLSTATEOBJECT obj[32];
 } LWPTTLFULLSTATE;
 
+// UDP
 typedef struct _LWPTTLSTATICOBJECT {
     int x0;
     int y0;
@@ -26,21 +32,44 @@ typedef struct _LWPTTLSTATICOBJECT {
     int y1;
 } LWPTTLSTATICOBJECT;
 
+// UDP
 typedef struct _LWPTTLSTATICSTATE {
     unsigned char type;
     unsigned char padding0;
     unsigned char padding1;
     unsigned char padding2;
     int count;
-    LWPTTLSTATICOBJECT obj[128];
+    LWPTTLSTATICOBJECT obj[256];
 } LWPTTLSTATICSTATE;
 
+// UDP
+typedef struct _LWPTTLSTATICOBJECT2 {
+    char x0;
+    char y0;
+    char x1;
+    char y1;
+} LWPTTLSTATICOBJECT2;
+
+// UDP
+typedef struct _LWPTTLSTATICSTATE2 {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    int xc0;
+    int yc0;
+    int count;
+    LWPTTLSTATICOBJECT2 obj[256];
+} LWPTTLSTATICSTATE2;
+
+// UDP
 typedef struct _LWPTTLSEAPORTOBJECT {
     int x0;
     int y0;
     char name[64];
 } LWPTTLSEAPORTOBJECT;
 
+// UDP
 typedef struct _LWPTTLSEAPORTSTATE {
     unsigned char type;
     unsigned char padding0;
@@ -50,6 +79,7 @@ typedef struct _LWPTTLSEAPORTSTATE {
     LWPTTLSEAPORTOBJECT obj[200];
 } LWPTTLSEAPORTSTATE;
 
+// UDP
 typedef struct _LWPTTLTRACKCOORDS {
     unsigned char type;
     unsigned char padding0;
@@ -60,6 +90,7 @@ typedef struct _LWPTTLTRACKCOORDS {
     float y;
 } LWPTTLTRACKCOORDS;
 
+// UDP
 typedef struct _LWPTTLSEAAREA {
     unsigned char type;
     unsigned char padding0;
@@ -67,3 +98,18 @@ typedef struct _LWPTTLSEAAREA {
     unsigned char padding2;
     char name[128];
 } LWPTTLSEAAREA;
+
+// PING
+typedef struct _LWPTTLPING {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    float lng, lat, ex; // x center, y center, extent
+    int ping_seq;
+    int track_object_id;
+    int track_object_ship_id;
+} LWPTTLPING;
+/*
+* END: should sync with packet.h in sea-server
+*/

@@ -24,10 +24,11 @@ namespace ss {
         void update();
         void start_receive();
         void send_full_state(float xc, float yc, float ex);
-        void send_static_state(float xc, float yc, float ex);
-        void send_seaport(float xc, float yc, float ex);
+        void send_static_state(float lng, float lat, float ex);
+        void send_static_state2(float lng, float lat, float ex);
+        void send_seaport(float lng, float lat, float ex);
         void send_track_object_coords(int track_object_id, int track_object_ship_id);
-        void send_seaarea(float xc, float yc);
+        void send_seaarea(float lng, float lat);
 
         // How to test handle_receive():
         // $ perl -e "print pack('ff',10.123,20.456)" > /dev/udp/127.0.0.1/3100

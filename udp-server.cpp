@@ -163,7 +163,7 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
+    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % lng % lat % ex % reply_obj_index;
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
@@ -178,8 +178,8 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
     }
 }
 
-void udp_server::send_static_state(float xc, float yc, float ex) {
-    auto sop_list = sea_static_->query_near_lng_lat_to_packet(xc, yc, ex);
+void udp_server::send_static_state(float lng, float lat, float ex) {
+    auto sop_list = sea_static_->query_near_lng_lat_to_packet(lng, lat, ex);
 
     boost::shared_ptr<LWPTTLSTATICSTATE> reply(new LWPTTLSTATICSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE));
@@ -191,12 +191,12 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
         reply->obj[reply_obj_index].x1 = v.x1;
         reply->obj[reply_obj_index].y1 = v.y1;
         reply_obj_index++;
-        if (reply_obj_index >= boost::size(reply->obj)) {
+        if (reply_obj_index >= std::min(boost::ulong_long_type(128), boost::size(reply->obj))) {
             break;
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % xc % yc % ex % reply_obj_index;
+    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % lng % lat % ex % reply_obj_index;
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
@@ -207,7 +207,53 @@ void udp_server::send_static_state(float xc, float yc, float ex) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("send_static_state: LZ4_compress_default() error! - %1%\n") % compressed_size;
+        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
+            % __func__
+            % compressed_size;
+    }
+}
+
+void udp_server::send_static_state2(float lng, float lat, float ex) {
+    ex += 1.0f;
+    auto sop_list = sea_static_->query_near_lng_lat_to_packet(lng, lat, ex);
+    const auto half_cell_pixel_extent = static_cast<int>(roundf(ex / 2.0f)) + 1;
+    const auto xc0 = sea_static_->lng_to_xc(lng);
+    const auto yc0 = sea_static_->lat_to_yc(lat);
+    const auto xclo = - half_cell_pixel_extent;
+    const auto xchi = + half_cell_pixel_extent;
+    const auto yclo = - half_cell_pixel_extent;
+    const auto ychi = + half_cell_pixel_extent;
+    boost::shared_ptr<LWPTTLSTATICSTATE2> reply(new LWPTTLSTATICSTATE2);
+    memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE2));
+    reply->type = 115; // LPGP_LWPTTLSTATICSTATE2
+    reply->xc0 = xc0;
+    reply->yc0 = yc0;
+    size_t reply_obj_index = 0;
+    for (const auto& v : sop_list) {
+        reply->obj[reply_obj_index].x0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x0 - xc0, xclo, xchi));
+        reply->obj[reply_obj_index].y0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y0 - yc0, yclo, ychi));
+        reply->obj[reply_obj_index].x1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x1 - xc0, xclo, xchi));
+        reply->obj[reply_obj_index].y1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y1 - yc0, yclo, ychi));
+        reply_obj_index++;
+        if (reply_obj_index >= boost::size(reply->obj)) {
+            break;
+        }
+    }
+    reply->count = static_cast<int>(reply_obj_index);
+    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % lng % lat % ex % reply_obj_index;
+    char compressed[1500];
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE2), static_cast<int>(boost::size(compressed)));
+    if (compressed_size > 0) {
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                              remote_endpoint_,
+                              boost::bind(&udp_server::handle_send,
+                                          this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    } else {
+        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
+            % __func__
+            % compressed_size;
     }
 }
 
@@ -248,8 +294,8 @@ void udp_server::send_track_object_coords(int track_object_id, int track_object_
     }
 }
 
-void udp_server::send_seaport(float xc, float yc, float ex) {
-    auto sop_list = seaport_->query_near_lng_lat_to_packet(xc, yc, static_cast<int>(ex / 2));
+void udp_server::send_seaport(float lng, float lat, float ex) {
+    auto sop_list = seaport_->query_near_lng_lat_to_packet(lng, lat, static_cast<int>(ex / 2));
 
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
@@ -279,9 +325,9 @@ void udp_server::send_seaport(float xc, float yc, float ex) {
     }
 }
 
-void udp_server::send_seaarea(float xc, float yc) {
+void udp_server::send_seaarea(float lng, float lat) {
     std::string area_name;
-    region_->query_tree(xc, yc, area_name);
+    region_->query_tree(lng, lat, area_name);
 
     boost::shared_ptr<LWPTTLSEAAREA> reply(new LWPTTLSEAAREA);
     memset(reply.get(), 0, sizeof(LWPTTLSEAAREA));
@@ -307,24 +353,16 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
         if (type == 110) {
             // LPGP_LWPTTLPING
             //std::cout << "PING received." << std::endl;
-            unsigned char padding0 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x01);
-            unsigned char padding1 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x02);
-            unsigned char padding2 = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x03);
-            float xc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x04); // x center
-            float yc = *reinterpret_cast<float*>(recv_buffer_.data() + 0x08); // y center
-            float ex = *reinterpret_cast<float*>(recv_buffer_.data() + 0x0c); // extent
-            int ping_seq = *reinterpret_cast<int*>(recv_buffer_.data() + 0x10);
-            int track_object_id = *reinterpret_cast<int*>(recv_buffer_.data() + 0x14);
-            int track_object_ship_id = *reinterpret_cast<int*>(recv_buffer_.data() + 0x18);
-
-            send_full_state(xc, yc, ex);
-            if (ping_seq % 64 == 0) {
-                send_static_state(xc, yc, ex);
-                send_seaport(xc, yc, ex);
-                send_seaarea(xc, yc);
+            auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
+            
+            send_full_state(p->lng, p->lat, p->ex); // ships (vessels)
+            if (p->ping_seq % 64 == 0) {
+                send_static_state2(p->lng, p->lat, p->ex); // land cells
+                send_seaport(p->lng, p->lat, p->ex); // seaports
+                send_seaarea(p->lng, p->lat); // area titles
             }
-            if (track_object_id || track_object_ship_id) {
-                send_track_object_coords(track_object_id, track_object_ship_id);
+            if (p->track_object_id || p->track_object_ship_id) {
+                send_track_object_coords(p->track_object_id, p->track_object_ship_id); // tracking info
             }
             //std::cout << "STATE replied." << std::endl;
         }
