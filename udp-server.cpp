@@ -244,6 +244,11 @@ void udp_server::send_static_state2(float lng, float lat, float ex) {
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE2), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
+        boost::crc_32_type result;
+        result.process_bytes(compressed, compressed_size);
+        auto crc = result.checksum();
+        std::cout << boost::format("CRC: %1%\n") % crc;
+
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
                               boost::bind(&udp_server::handle_send,
