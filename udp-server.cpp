@@ -191,7 +191,7 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
         reply->obj[reply_obj_index].x1 = v.x1;
         reply->obj[reply_obj_index].y1 = v.y1;
         reply_obj_index++;
-        if (reply_obj_index >= std::min(boost::ulong_long_type(128), boost::size(reply->obj))) {
+        if (reply_obj_index >= 128) {
             break;
         }
     }
@@ -214,7 +214,7 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
 }
 
 void udp_server::send_static_state2(float lng, float lat, float ex) {
-    ex += 1.0f;
+    ex += 1.0f; // improvised: no land cell pop up phenomenon around client view borders at tracking mode...
     auto sop_list = sea_static_->query_near_lng_lat_to_packet(lng, lat, ex);
     const auto half_cell_pixel_extent = static_cast<int>(roundf(ex / 2.0f)) + 1;
     const auto xc0 = sea_static_->lng_to_xc(lng);
