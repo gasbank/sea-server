@@ -39,7 +39,7 @@ typedef struct _LWPTTLSTATICSTATE {
     unsigned char padding1;
     unsigned char padding2;
     int count;
-    LWPTTLSTATICOBJECT obj[256];
+    LWPTTLSTATICOBJECT obj[256+128];
 } LWPTTLSTATICSTATE;
 
 // UDP
@@ -59,7 +59,7 @@ typedef struct _LWPTTLSTATICSTATE2 {
     int xc0;
     int yc0;
     int count;
-    LWPTTLSTATICOBJECT2 obj[256];
+    LWPTTLSTATICOBJECT2 obj[256+128];
 } LWPTTLSTATICSTATE2;
 
 // UDP
@@ -76,7 +76,7 @@ typedef struct _LWPTTLSEAPORTSTATE {
     unsigned char padding1;
     unsigned char padding2;
     int count;
-    LWPTTLSEAPORTOBJECT obj[200];
+    LWPTTLSEAPORTOBJECT obj[128];
 } LWPTTLSEAPORTSTATE;
 
 // UDP
@@ -109,6 +109,7 @@ typedef struct _LWPTTLPING {
     int ping_seq;
     int track_object_id;
     int track_object_ship_id;
+    int view_scale;
 } LWPTTLPING;
 /*
 * END: should sync with packet.h in sea-server

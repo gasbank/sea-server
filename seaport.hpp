@@ -13,11 +13,11 @@ namespace ss {
         seaport_object_public::point_t get_seaport_point(const char* name) const;
         seaport();
         int get_nearest_two(const xy32& pos, int& id1, std::string& name1, int& id2, std::string& name2) const;
+        int lng_to_xc(float lng) const;
+        int lat_to_yc(float lat) const;
     private:
         std::vector<seaport_object_public> query_near_to_packet(int xc, int yc, int halfex) const; 
         std::vector<seaport_object_public::value_t> query_tree(int xc, int yc, int halfex) const;
-        int lng_to_xc(float lng) const;
-        int lat_to_yc(float lat) const;
         bi::managed_mapped_file file;
         seaport_object_public::allocator_t alloc;
         seaport_object_public::rtree_t* rtree_ptr;

@@ -132,9 +132,9 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
     }
 }
 
-void udp_server::send_full_state(float xc, float yc, float ex) {
+void udp_server::send_full_state(float xc, float yc, float ex, int view_scale) {
     std::vector<sea_object_public> sop_list;
-    sea_->query_near_lng_lat_to_packet(xc, yc, ex, sop_list);
+    sea_->query_near_lng_lat_to_packet(xc, yc, ex * view_scale, sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
@@ -174,7 +174,9 @@ void udp_server::send_full_state(float xc, float yc, float ex) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("send_full_state: LZ4_compress_default() error! - %1%\n") % compressed_size;
+        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
+            % __func__
+            % compressed_size;
     }
 }
 
@@ -213,12 +215,14 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
     }
 }
 
-void udp_server::send_static_state2(float lng, float lat, float ex) {
-    ex += 1.0f; // improvised: no land cell pop up phenomenon around client view borders at tracking mode...
-    auto sop_list = sea_static_->query_near_lng_lat_to_packet(lng, lat, ex);
-    const auto half_cell_pixel_extent = static_cast<int>(roundf(ex / 2.0f)) + 1;
-    const auto xc0 = sea_static_->lng_to_xc(lng);
-    const auto yc0 = sea_static_->lat_to_yc(lat);
+void udp_server::send_static_state2(float lng, float lat, float ex, int view_scale) {
+    ex *= view_scale;
+    ex += view_scale;
+    const auto xc0 = sea_static_->lng_to_xc(lng);//&~(view_scale - 1);
+    const auto yc0 = sea_static_->lat_to_yc(lat);//&~(view_scale - 1);
+    auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex);
+    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f) + view_scale;
+    
     const auto xclo = - half_cell_pixel_extent;
     const auto xchi = + half_cell_pixel_extent;
     const auto yclo = - half_cell_pixel_extent;
@@ -229,14 +233,28 @@ void udp_server::send_static_state2(float lng, float lat, float ex) {
     reply->xc0 = xc0;
     reply->yc0 = yc0;
     size_t reply_obj_index = 0;
+    size_t reply_obj_dropped_count = 0;
     for (const auto& v : sop_list) {
-        reply->obj[reply_obj_index].x0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x0 - xc0, xclo, xchi));
-        reply->obj[reply_obj_index].y0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y0 - yc0, yclo, ychi));
-        reply->obj[reply_obj_index].x1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x1 - xc0, xclo, xchi));
-        reply->obj[reply_obj_index].y1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y1 - yc0, yclo, ychi));
-        reply_obj_index++;
-        if (reply_obj_index >= boost::size(reply->obj)) {
-            break;
+        const auto x0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x0 - xc0, xclo, xchi) / view_scale);
+        const auto x1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x1 - xc0, xclo, xchi) / view_scale);
+        // skip degenerated one
+        if (x0 >= x1) {
+            continue;
+        }
+        const auto y0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y0 - yc0, yclo, ychi) / view_scale);
+        const auto y1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y1 - yc0, yclo, ychi) / view_scale);
+        // skip degenerated one
+        if (y0 >= y1) {
+            continue;
+        }
+        if (reply_obj_index < boost::size(reply->obj)) {
+            reply->obj[reply_obj_index].x0 = x0;
+            reply->obj[reply_obj_index].y0 = y0;
+            reply->obj[reply_obj_index].x1 = x1;
+            reply->obj[reply_obj_index].y1 = y1;
+            reply_obj_index++;
+        } else {
+            reply_obj_dropped_count++;
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
@@ -258,6 +276,13 @@ void udp_server::send_static_state2(float lng, float lat, float ex) {
     } else {
         std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
             % __func__
+            % compressed_size;
+    }
+    if (reply_obj_dropped_count) {
+        std::cerr << boost::format("%1%: %2% cells dropped. (max: %3%) Compressed size is %4% bytes.\n")
+            % __func__
+            % reply_obj_dropped_count
+            % boost::size(reply->obj)
             % compressed_size;
     }
 }
@@ -294,14 +319,14 @@ void udp_server::send_track_object_coords(int track_object_id, int track_object_
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("send_track_object_coords: LZ4_compress_default() error! - %1%\n")
+        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
+            % __func__
             % compressed_size;
     }
 }
 
-void udp_server::send_seaport(float lng, float lat, float ex) {
-    auto sop_list = seaport_->query_near_lng_lat_to_packet(lng, lat, static_cast<int>(ex / 2));
-
+void udp_server::send_seaport(float lng, float lat, float ex, int view_scale) {
+    auto sop_list = seaport_->query_near_lng_lat_to_packet(lng, lat, static_cast<int>(ex / 2) * view_scale);
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
@@ -309,7 +334,9 @@ void udp_server::send_seaport(float lng, float lat, float ex) {
     for (seaport_object_public const& v : sop_list) {
         reply->obj[reply_obj_index].x0 = v.x0;
         reply->obj[reply_obj_index].y0 = v.y0;
-        strcpy(reply->obj[reply_obj_index].name, seaport_->get_seaport_name(v.id));
+        if (view_scale < 16) {
+            strcpy(reply->obj[reply_obj_index].name, seaport_->get_seaport_name(v.id));
+        }
         reply_obj_index++;
         if (reply_obj_index >= boost::size(reply->obj)) {
             break;
@@ -326,7 +353,9 @@ void udp_server::send_seaport(float lng, float lat, float ex) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("send_seaport: LZ4_compress_default() error! - %1%\n") % compressed_size;
+        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
+            % __func__
+            % compressed_size;
     }
 }
 
@@ -360,10 +389,10 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             //std::cout << "PING received." << std::endl;
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
             
-            send_full_state(p->lng, p->lat, p->ex); // ships (vessels)
+            send_full_state(p->lng, p->lat, p->ex, p->view_scale); // ships (vessels)
             if (p->ping_seq % 64 == 0) {
-                send_static_state2(p->lng, p->lat, p->ex); // land cells
-                send_seaport(p->lng, p->lat, p->ex); // seaports
+                send_static_state2(p->lng, p->lat, p->ex, p->view_scale); // land cells
+                send_seaport(p->lng, p->lat, p->ex, p->view_scale); // seaports
                 send_seaarea(p->lng, p->lat); // area titles
             }
             if (p->track_object_id || p->track_object_ship_id) {

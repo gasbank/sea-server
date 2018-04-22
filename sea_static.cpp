@@ -25,10 +25,11 @@ int sea_static::lat_to_yc(float lat) const {
 }
 
 std::vector<sea_static_object_public> sea_static::query_near_lng_lat_to_packet(float lng, float lat, float ex) const {
-    return query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), static_cast<int>(roundf(ex / 2.0f)));
+    return query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), ex);
 }
 
-std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc, int yc, int halfex) const {
+std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc, int yc, float ex) const {
+    const auto halfex = boost::math::iround(ex / 2);
     auto values = query_tree(xc, yc, halfex);
     std::vector<sea_static_object_public> sop_list;
     for (std::size_t i = 0; i < values.size(); i++) {
