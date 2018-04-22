@@ -216,9 +216,9 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
 }
 
 #ifdef __GNUC__
-int __builtin_clz(unsigned int x);
+int __builtin_ctz(unsigned int x);
 int msb_index(unsigned int v) {
-    return (int)(sizeof(unsigned int)*8 - __builtin_clz(v));
+    return __builtin_ctz(v);
 }
 #else
 // MSVC perhaps...
