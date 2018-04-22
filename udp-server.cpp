@@ -215,13 +215,30 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
     }
 }
 
+#ifdef __GNUC__
+int __builtin_clz(unsigned int x);
+int msb_index(unsigned int v) {
+    return (int)(sizeof(unsigned int)*8 - __builtin_clz(v));
+}
+#else
+// MSVC perhaps...
+#include <intrin.h> 
+#pragma intrinsic(_BitScanReverse)
+int msb_index(unsigned int v) {
+    unsigned long view_scale_msb_index = 0;
+    _BitScanReverse(&view_scale_msb_index, (unsigned long)v);
+    return (int)view_scale_msb_index;
+}
+#endif
+
 void udp_server::send_static_state2(float lng, float lat, float ex, int view_scale) {
     ex *= view_scale;
     ex += view_scale;
-    const auto xc0 = sea_static_->lng_to_xc(lng);//&~(view_scale - 1);
-    const auto yc0 = sea_static_->lat_to_yc(lat);//&~(view_scale - 1);
+    ex += view_scale;
+    const auto xc0 = sea_static_->lng_to_xc(lng) &~(view_scale - 1);
+    const auto yc0 = sea_static_->lat_to_yc(lat) &~(view_scale - 1);
     auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex);
-    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f) + view_scale;
+    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f) +view_scale;
     
     const auto xclo = - half_cell_pixel_extent;
     const auto xchi = + half_cell_pixel_extent;
@@ -234,15 +251,21 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
     reply->yc0 = yc0;
     size_t reply_obj_index = 0;
     size_t reply_obj_dropped_count = 0;
+    int view_scale_msb_index = msb_index(view_scale);
     for (const auto& v : sop_list) {
-        const auto x0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x0 - xc0, xclo, xchi) / view_scale);
-        const auto x1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.x1 - xc0, xclo, xchi) / view_scale);
+        const auto vx0 = v.x0 &~(view_scale - 1);
+        const auto vy0 = v.y0 &~(view_scale - 1);
+        const auto vx1 = v.x1 &~(view_scale - 1);
+        const auto vy1 = v.y1 &~(view_scale - 1);
+
+        const auto x0 = boost::numeric_cast<char>(boost::algorithm::clamp(vx0 - xc0, xclo, xchi) >> view_scale_msb_index);
+        const auto x1 = boost::numeric_cast<char>(boost::algorithm::clamp(vx1 - xc0, xclo, xchi) >> view_scale_msb_index);
         // skip degenerated one
         if (x0 >= x1) {
             continue;
         }
-        const auto y0 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y0 - yc0, yclo, ychi) / view_scale);
-        const auto y1 = boost::numeric_cast<char>(boost::algorithm::clamp(v.y1 - yc0, yclo, ychi) / view_scale);
+        const auto y0 = boost::numeric_cast<char>(boost::algorithm::clamp(vy0 - yc0, yclo, ychi) >> view_scale_msb_index);
+        const auto y1 = boost::numeric_cast<char>(boost::algorithm::clamp(vy1 - yc0, yclo, ychi) >> view_scale_msb_index);
         // skip degenerated one
         if (y0 >= y1) {
             continue;
@@ -390,7 +413,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
             
             send_full_state(p->lng, p->lat, p->ex, p->view_scale); // ships (vessels)
-            if (p->ping_seq % 64 == 0) {
+            if (p->ping_seq % 32 == 0) {
                 send_static_state2(p->lng, p->lat, p->ex, p->view_scale); // land cells
                 send_seaport(p->lng, p->lat, p->ex, p->view_scale); // seaports
                 send_seaarea(p->lng, p->lat); // area titles
