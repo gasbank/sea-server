@@ -596,9 +596,9 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
         ASPath path = ASPathCreate(&PathNodeSource, rtree_ptr, &from_rect, &to_rect);
         size_t pathCount = ASPathGetCount(path);
         if (pathCount > 0) {
-            LOGI("Cell Path Count: %zu\n", pathCount);
+            LOGI("Cell Path Count: %zu", pathCount);
             float pathCost = ASPathGetCost(path);
-            LOGI("Cell Path Cost: %f\n", pathCost);
+            LOGI("Cell Path Cost: %f", pathCost);
             /*if (pathCost < 6000)*/
             {
                 for (size_t i = 0; i < pathCount; i++) {
