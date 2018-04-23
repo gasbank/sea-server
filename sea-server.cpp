@@ -11,7 +11,10 @@ using namespace ss;
 
 int main() {
     try {
-        std::cout << "sea-server v0.1" << std::endl;
+        const int major = 0;
+        const int minor = 1;
+        const int patch = 0;
+        LOGI("sea-server v%d.%d.%d", major, minor, patch);
         auto cwd = boost::filesystem::current_path();
         do {
             auto assets = cwd;
@@ -27,7 +30,7 @@ int main() {
             abort();
         }
 
-        std::cout << "Current path: " << boost::filesystem::current_path() << std::endl;
+        LOGI("Current path: %s", boost::filesystem::current_path());
         boost::asio::io_service io_service;
         std::shared_ptr<sea> sea_instance(new sea());
         sea_instance->populate_test();
@@ -45,7 +48,7 @@ int main() {
         udp_admin_server_instance->send_recover_all_ships();
         io_service.run();
     } catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        LOGE(e.what());
     }
 
     return 0;

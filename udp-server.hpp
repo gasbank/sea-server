@@ -23,7 +23,7 @@ namespace ss {
         void make_test_route();
         void update();
         void start_receive();
-        void send_full_state(float xc, float yc, float ex, int view_scale);
+        void send_full_state(float lng, float lat, float ex, int view_scale);
         void send_static_state(float lng, float lat, float ex);
         void send_static_state2(float lng, float lat, float ex, int view_scale);
         void send_seaport(float lng, float lat, float ex, int view_scale);

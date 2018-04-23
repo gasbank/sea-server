@@ -110,12 +110,12 @@ int seaport::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int&
         if (count == 0) {
             id1 = it->second;
             name1 = get_seaport_name(it->second);
-            std::cout << boost::format("Nearest 1: %1% (%2%,%3%)\n") % name1 % it->first.get<0>() % it->first.get<1>();
+            LOGI("Nearest 1: %1% (%2%,%3%)", name1, it->first.get<0>(), it->first.get<1>());
             count++;
         } else if (count == 1) {
             id2 = it->second;
             name2 = get_seaport_name(it->second);
-            std::cout << boost::format("Nearest 2: %1% (%2%,%3%)\n") % name2 % it->first.get<0>() % it->first.get<1>();
+            LOGI("Nearest 2: %1% (%2%,%3%)", name2, it->first.get<0>(), it->first.get<1>());
             count++;
             return count;
         }

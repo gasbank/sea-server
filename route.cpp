@@ -13,7 +13,7 @@ route::route(const std::vector<xy32>& waypoints)
     , velocity(0)
     , param(0) {
     if (waypoints.size() == 0) {
-        std::cerr << "route created with empty waypoints..." << std::endl;
+        LOGE("route created with empty waypoints...");
     } else {
         float dist = 0;
         accum_distance.push_back(dist);

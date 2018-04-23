@@ -3,6 +3,10 @@
 #include "AStar.h"
 
 using namespace astarrtree;
+using ss::LOGI;
+using ss::LOGIx;
+using ss::LOGE;
+using ss::LOGEx;
 
 xy32xy32 xyxy_from_box_t(const box_t& v) {
     xy32xy32 r;
@@ -84,13 +88,13 @@ void AddNeighborWithLog(ASNeighborList neighbors, xy32ib* n, pixel_waypoint_sear
         cb(neighbors, n, pws);
     } else {
         ASNeighborListAdd(neighbors, &neighbor, xyib_distance(*n, neighbor));
-        /*printf("Neighbor of (%5d,%5d)[%5d] : (%5d,%5d)[%5d]\n",
-        n->p.x,
-        n->p.y,
-        n->i,
-        x,
-        y,
-        i);*/
+        LOGI("Neighbor of (%5d,%5d)[%5d] : (%5d,%5d)[%5d]",
+             n->p.x,
+             n->p.y,
+             n->i,
+             x,
+             y,
+             i);
     }
 }
 
@@ -154,7 +158,7 @@ RECT_RELATION rect_relation(const xy32xy32* n1c, const xy32xy32* n2c) {
     } else if (!d && !u && !r && l) {
         return RR_LEFT;
     } else {
-        std::cerr << "Unknown rect relation..." << std::endl;
+        LOGE("Unknown rect relation...");
         return RR_UNKNOWN;
     }
 }
@@ -206,7 +210,7 @@ RECT_RELATION rect_neighbor_relation(const xy32xy32* n1c, const xy32xy32* n2c) {
     } else if (!d && !u && !r && l) {
         return RR_LEFT;
     } else {
-        std::cerr << "Unknown rect relation..." << std::endl;
+        LOGE("Unknown rect relation...");
         return RR_UNKNOWN;
     }
 }
@@ -274,7 +278,7 @@ void AddNeighborByRectRelation(xy32xy32* n1c,
             }
         }
         break;
-    }   
+    }
     case RR_RIGHT:
     {
         const int ybeg = std::max(n1c->xy0.y, n2c->xy0.y);
@@ -289,7 +293,7 @@ void AddNeighborByRectRelation(xy32xy32* n1c,
         }
         break;
     }
-        
+
     case RR_LEFT:
     {
         const int ybeg = std::max(n1c->xy0.y, n2c->xy0.y);
@@ -303,10 +307,10 @@ void AddNeighborByRectRelation(xy32xy32* n1c,
             }
         }
         break;
-    }   
+    }
     case RR_UNKNOWN:
     default:
-        std::cerr << "Logic error for finding neighboring pixels..." << std::endl;
+        LOGE("Logic error for finding neighboring pixels...");
         abort();
         break;
     }
@@ -343,7 +347,7 @@ void RTreePixelPathNodeNeighbors(ASNeighborList neighbors, void *node, void *con
         next_ee = XEE_ENTER;
         next_i = n->i + 1; // the next cell node
     } else {
-        std::cerr << "Corrupted ee" << std::endl;
+        LOGE("Corrupted ee");
         abort();
     }
     AddNeighborByRectRelation(n1c,
@@ -388,7 +392,7 @@ void RTreePixelPathNodeNeighborsSuboptimal(ASNeighborList neighbors, void *node,
         next_ee = XEE_ENTER;
         next_i = n->i + 1; // the next cell node
     } else {
-        std::cerr << "Corrupted ee" << std::endl;
+        LOGE("Corrupted ee");
         abort();
     }
     const bool add_nearest_only = !(n->i == 0 && n->ee == XEE_ENTER);
@@ -444,7 +448,7 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
     };
     size_t cell_path_count = ASPathGetCount(cell_path);
     if (cell_path_count == 0) {
-        std::cerr << "calculate_pixel_waypoints: cell_path_count is 0." << std::endl;
+        LOGE("calculate_pixel_waypoints: cell_path_count is 0.");
         abort();
     }
     xy32ib from_rect = { from, 0, XEE_ENTER };
@@ -453,23 +457,23 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
     ASPath pixel_path = ASPathCreate(&PathNodeSource, &pws, &from_rect, &to_rect);
     size_t pixel_path_count = ASPathGetCount(pixel_path);
     if (pixel_path_count > 0) {
-        printf("Path Count: %zu\n", pixel_path_count);
+        LOGI("Path Count: %zu", pixel_path_count);
         float pixel_path_cost = ASPathGetCost(pixel_path);
-        printf("Path Cost: %f\n", pixel_path_cost);
+        LOGI("Path Cost: %f", pixel_path_cost);
         /*if (pixel_path_cost < 6000)*/
         {
             for (size_t i = 0; i < pixel_path_count; i++) {
                 xy32ib* pixel_node = reinterpret_cast<xy32ib*>(ASPathGetNode(pixel_path, i));
-                printf("Pixel Path %zu: (%d, %d) [Cell index=%zu]\n",
-                       i,
-                       pixel_node->p.x,
-                       pixel_node->p.y,
-                       pixel_node->i);
+                LOGI("Pixel Path %zu: (%d, %d) [Cell index=%zu]",
+                     i,
+                     pixel_node->p.x,
+                     pixel_node->p.y,
+                     pixel_node->i);
                 waypoints.push_back(pixel_node->p);
             }
         }
     } else {
-        std::cerr << "No pixel waypoints found." << std::endl;
+        LOGE("No pixel waypoints found.");
     }
     ASPathDestroy(pixel_path);
     return waypoints;
@@ -486,7 +490,7 @@ bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box
     if (from_result_s.size() == 0) {
         auto nearest_it = rtree_ptr->qbegin(bgi::nearest(from_box, 1));
         if (nearest_it == rtree_ptr->qend()) {
-            std::cerr << "Empty result from nearest query..." << std::endl;
+            LOGE("Empty result from nearest query...");
             abort();
         }
         auto nearest_xyxy = xyxy_from_box_t(nearest_it->first);
@@ -534,7 +538,7 @@ bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box
             break;
         case RR_UNKNOWN:
         default:
-            std::cerr << "rect relation unknown..." << std::endl;
+            LOGE("rect relation unknown...");
             abort();
             break;
         }
@@ -546,15 +550,15 @@ bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box
 
 std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, xy32 to) {
     float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
-    std::cout << boost::format("Pathfinding from (%1%,%2%) -> (%3%,%4%) [Manhattan distance = %5%]\n")
-        % from.x
-        % from.y
-        % to.x
-        % to.y
-        % distance;
+    ss::LOGI("Pathfinding from (%1%,%2%) -> (%3%,%4%) [Manhattan distance = %5%]",
+             from.x,
+             from.y,
+             to.x,
+             to.y,
+             distance);
 
     std::vector<xy32> waypoints;
-    printf("R Tree size: %zu\n", rtree_ptr->size());
+    ss::LOGI("R Tree size: %zu", rtree_ptr->size());
     if (rtree_ptr->size() == 0) {
         return waypoints;
     }
@@ -563,18 +567,18 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
     std::vector<value_t> from_result_s;
     rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
     if (astarrtree::find_nearest_point_if_empty(rtree_ptr, from, from_box, from_result_s)) {
-        std::cout << boost::format("  'From' point changed to (%1%,%2%)\n")
-            % from.x
-            % from.y;
+        ss::LOGI("  'From' point changed to (%1%,%2%)",
+                 from.x,
+                 from.y);
     }
 
     auto to_box = box_t_from_xy(to);
     std::vector<value_t> to_result_s;
     rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
     if (astarrtree::find_nearest_point_if_empty(rtree_ptr, to, to_box, to_result_s)) {
-        std::cout << boost::format("  'To' point changed to (%1%,%2%)\n")
-            % to.x
-            % to.y;
+        ss::LOGI("  'To' point changed to (%1%,%2%)",
+                 to.x,
+                 to.y);
     }
 
     if (from_result_s.size() == 1 && to_result_s.size() == 1) {
@@ -592,32 +596,32 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
         ASPath path = ASPathCreate(&PathNodeSource, rtree_ptr, &from_rect, &to_rect);
         size_t pathCount = ASPathGetCount(path);
         if (pathCount > 0) {
-            printf("Cell Path Count: %zu\n", pathCount);
+            LOGI("Cell Path Count: %zu\n", pathCount);
             float pathCost = ASPathGetCost(path);
-            printf("Cell Path Cost: %f\n", pathCost);
+            LOGI("Cell Path Cost: %f\n", pathCost);
             /*if (pathCost < 6000)*/
             {
                 for (size_t i = 0; i < pathCount; i++) {
                     xy32xy32* node = reinterpret_cast<xy32xy32*>(ASPathGetNode(path, i));
-                    printf("Cell Path %zu: (%d, %d)-(%d, %d) [%d x %d = %d]\n",
-                           i,
-                           node->xy0.x,
-                           node->xy0.y,
-                           node->xy1.x,
-                           node->xy1.y,
-                           node->xy1.x - node->xy0.x,
-                           node->xy1.y - node->xy0.y,
-                           (node->xy1.x - node->xy0.x) * (node->xy1.y - node->xy0.y));
+                    LOGI("Cell Path %zu: (%d, %d)-(%d, %d) [%d x %d = %d]",
+                         i,
+                         node->xy0.x,
+                         node->xy0.y,
+                         node->xy1.x,
+                         node->xy1.y,
+                         node->xy1.x - node->xy0.x,
+                         node->xy1.y - node->xy0.y,
+                         (node->xy1.x - node->xy0.x) * (node->xy1.y - node->xy0.y));
                 }
             }
             // Phase 2 - per-pixel node searching
             waypoints = calculate_pixel_waypoints(from, to, path);
         } else {
-            std::cerr << "No path found." << std::endl;
+            LOGE("No path found.");
         }
         ASPathDestroy(path);
     } else {
-        std::cerr << "From-node and/or to-node error." << std::endl;
+        LOGE("From-node and/or to-node error.");
     }
     return waypoints;
 }

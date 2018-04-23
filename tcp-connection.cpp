@@ -34,9 +34,9 @@ tcp_connection::tcp_connection(boost::asio::io_service & io_service)
 
 void tcp_connection::handle_write(const boost::system::error_code & error, size_t bytes_written) {
     if (error) {
-        std::cerr << error << std::endl;
+        LOGE("ERROR: %s", error);
     } else {
-        std::cout << bytes_written << " bytes written." << std::endl;
+        LOGI("%d bytes written.", bytes_written);
     }
 }
 
@@ -46,10 +46,12 @@ void tcp_connection::do_read_command() {
                             boost::asio::buffer(recv_buffer_.data(), 4),
                             [this, self](const boost::system::error_code & error, size_t bytes_read) {
         if (error) {
-            std::cerr << "error: " << error << std::endl;
+            LOGE("ERROR: %s", error);
             return;
         } else {
-            std::cout << bytes_read << " bytes read. request code: " << *reinterpret_cast<int*>(recv_buffer_.data()) << std::endl;
+            LOGI("%1% bytes read. request code: %2%",
+                 bytes_read,
+                 *reinterpret_cast<int*>(recv_buffer_.data()));
 
             do_read_float1();
         }
@@ -62,11 +64,12 @@ void tcp_connection::do_read_float1() {
                             boost::asio::buffer(recv_buffer_.data(), 4),
                             [this, self](const boost::system::error_code & error, size_t bytes_read) {
         if (error) {
-            std::cerr << "error: " << error << std::endl;
+            LOGE("ERROR: %s", error);
             return;
         } else {
-            std::cout << bytes_read << " bytes read. float 1: " << *reinterpret_cast<float*>(recv_buffer_.data()) << std::endl;
-
+            LOGI("%1% bytes read. float 1: %2%",
+                 bytes_read,
+                 *reinterpret_cast<float*>(recv_buffer_.data()));
             do_read_float2();
         }
     });
@@ -79,10 +82,12 @@ void tcp_connection::do_read_float2() {
                             boost::asio::buffer(recv_buffer_.data(), 4),
                             [this, self](const boost::system::error_code & error, size_t bytes_read) {
         if (error) {
-            std::cerr << "error: " << error << std::endl;
+            LOGE("ERROR: %s", error);
             return;
         } else {
-            std::cout << bytes_read << " bytes read. float 2: " << *reinterpret_cast<float*>(recv_buffer_.data()) << std::endl;
+            LOGI("%1% bytes read. float 2: %2%",
+                 bytes_read,
+                 *reinterpret_cast<float*>(recv_buffer_.data()));
         }
         // read another request
         start_read_request();

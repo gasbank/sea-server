@@ -26,11 +26,11 @@ void sea::populate_test() {
         float y = random_point(rng);
         spawn(i + 1, x, y, 1, 1);
         if ((i + 1) % 5000 == 0) {
-            std::cout << "Spawning " << (i + 1) << "..." << std::endl;
+            LOGI("Spawning %d...", i + 1);
         }
     }
     //travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
-    std::cout << "Spawning finished." << std::endl;
+    LOGI("Spawning finished.");
     std::vector<sea_object_public> sop_list;
     query_near_to_packet(0, 0, 10, sop_list);
 }
@@ -43,7 +43,7 @@ int sea::spawn(const char* guid, int type, float x, float y, float w, float h) {
         if (it2 != sea_objects.end()) {
             return id;
         } else {
-            std::cerr << boost::format("Spawn: Orphan entry found in sea_guid_to_id. (guid=%1%) Removing and respawn...") % guid;
+            LOGE("Spawn: Orphan entry found in sea_guid_to_id. (guid=%1%) Removing and respawn...", guid);
             sea_guid_to_id.erase(it);
             return spawn(guid, type, x, y, w, h);
         }
@@ -72,7 +72,7 @@ void sea::despawn(int type) {
         if (obj != nullptr) {
             rtree.remove(obj->get_rtree_value());
         } else {
-            std::cerr << boost::format("Cannot get sea object of type %1%!\n") % it->second;
+            LOGE("Cannot get sea object of type %1%!", it->second);
         }
         sea_objects.erase(it->second);
         obj = nullptr;
@@ -100,10 +100,10 @@ void sea::travel_to(const char* guid, float x, float y, float v) {
             it2->second.set_destination(x, y);
             rtree.insert(it2->second.get_rtree_value());
         } else {
-            std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
+            LOGE("Sea object not found corresponding to guid %1%", guid);
         }
     } else {
-        std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
+        LOGE("Sea object ID not found corresponding to guid %1%", guid);
     }
 }
 
@@ -112,7 +112,7 @@ SEA_OBJECT_STATE sea::get_object_state(int id) const {
     if (it != sea_objects.end()) {
         return it->second.get_state();
     } else {
-        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+        LOGE("Sea object not found corresponding to id %1%", id);
     }
     return SOS_ERROR;
 }
@@ -122,7 +122,7 @@ void sea::set_object_state(int id, SEA_OBJECT_STATE state) {
     if (it != sea_objects.end()) {
         it->second.set_state(state);
     } else {
-        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+        LOGE("Sea object not found corresponding to id %1%", id);
     }
 }
 
@@ -131,7 +131,7 @@ sea_object* sea::get_object_by_type(int type) {
     if (it != sea_object_id_by_type.end()) {
         return get_object(it->second);
     } else {
-        std::cerr << boost::format("Sea object ID cannot be found using type %1%\n") % type;
+        LOGE("Sea object ID cannot be found using type %1%", type);
     }
     return nullptr;
 }
@@ -141,7 +141,7 @@ sea_object* sea::get_object(int id) {
     if (it != sea_objects.end()) {
         return &it->second;
     } else {
-        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+        LOGE("Sea object not found corresponding to id %1%", id);
     }
     return nullptr;
 }
@@ -154,7 +154,7 @@ void sea::teleport_to(int id, float x, float y, float vx, float vy) {
         it->second.set_velocity(vx, vy);
         rtree.insert(it->second.get_rtree_value());
     } else {
-        std::cerr << boost::format("Sea object not found corresponding to id %1%\n") % id;
+        LOGE("Sea object not found corresponding to id %1%", id);
     }
 }
 
@@ -163,7 +163,7 @@ void sea::teleport_to(const char* guid, float x, float y, float vx, float vy) {
     if (it != sea_guid_to_id.end()) {
         teleport_to(it->second, x, y, vx, vy);
     } else {
-        std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
+        LOGE("Sea object ID not found corresponding to guid %1%", guid);
     }
 }
 
@@ -176,10 +176,10 @@ void sea::teleport_by(const char* guid, float dx, float dy) {
             it2->second.translate_xy(dx, dy);
             rtree.insert(it2->second.get_rtree_value());
         } else {
-            std::cerr << boost::format("Sea object not found corresponding to guid %1%\n") % guid;
+            LOGE("Sea object not found corresponding to guid %1%", guid);
         }
     } else {
-        std::cerr << boost::format("Sea object ID not found corresponding to guid %1%\n") % guid;
+        LOGE("Sea object ID not found corresponding to guid %1%", guid);
     }
 }
 

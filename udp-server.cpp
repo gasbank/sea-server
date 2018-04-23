@@ -28,7 +28,7 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , tick_seq_(0) {
 
     //make_test_route();
-    
+
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
 }
@@ -83,7 +83,7 @@ void udp_server::make_test_route() {
     //    "Yokohama",
     //    "Jurong/Singapore" });
 
-    std::cout << "Route setup completed." << std::endl;
+    LOGI("Route setup completed.");
 }
 
 bool udp_server::set_route(int id, int seaport_id1, int seaport_id2) {
@@ -126,15 +126,15 @@ void udp_server::start_receive() {
 
 void udp_server::handle_send(const boost::system::error_code & error, std::size_t bytes_transferred) {
     if (error) {
-        std::cerr << error << std::endl;
+        LOGE("ERROR: %s", error);
     } else {
-        //std::cout << bytes_transferred << " bytes sent." << std::endl;
+        LOGIx("%1% bytes sent.", bytes_transferred);
     }
 }
 
-void udp_server::send_full_state(float xc, float yc, float ex, int view_scale) {
+void udp_server::send_full_state(float lng, float lat, float ex, int view_scale) {
     std::vector<sea_object_public> sop_list;
-    sea_->query_near_lng_lat_to_packet(xc, yc, ex * view_scale, sop_list);
+    sea_->query_near_lng_lat_to_packet(lng, lat, ex * view_scale, sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
@@ -163,7 +163,7 @@ void udp_server::send_full_state(float xc, float yc, float ex, int view_scale) {
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % lng % lat % ex % reply_obj_index;
+    LOGIx("Querying (%1%,%2%) extent %3% => %4% hit(s).", lng, lat, ex, reply_obj_index);
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
@@ -174,9 +174,9 @@ void udp_server::send_full_state(float xc, float yc, float ex, int view_scale) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
-            % __func__
-            % compressed_size;
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
     }
 }
 
@@ -198,7 +198,7 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % lng % lat % ex % reply_obj_index;
+    LOGIx("Querying (%1%,%2%) extent %3% => %4% hit(s).", lng, lat, ex, reply_obj_index);
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
@@ -209,9 +209,9 @@ void udp_server::send_static_state(float lng, float lat, float ex) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
-            % __func__
-            % compressed_size;
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
     }
 }
 
@@ -238,12 +238,12 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
     const auto xc0 = sea_static_->lng_to_xc(lng) &~(view_scale - 1);
     const auto yc0 = sea_static_->lat_to_yc(lat) &~(view_scale - 1);
     auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex);
-    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f) +view_scale;
-    
-    const auto xclo = - half_cell_pixel_extent;
-    const auto xchi = + half_cell_pixel_extent;
-    const auto yclo = - half_cell_pixel_extent;
-    const auto ychi = + half_cell_pixel_extent;
+    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f) + view_scale;
+
+    const auto xclo = -half_cell_pixel_extent;
+    const auto xchi = +half_cell_pixel_extent;
+    const auto yclo = -half_cell_pixel_extent;
+    const auto ychi = +half_cell_pixel_extent;
     boost::shared_ptr<LWPTTLSTATICSTATE2> reply(new LWPTTLSTATICSTATE2);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE2));
     reply->type = 115; // LPGP_LWPTTLSTATICSTATE2
@@ -281,14 +281,14 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    //std::cout << boost::format("Querying (%1%,%2%) extent %3% => %4% hit(s).\n") % lng % lat % ex % reply_obj_index;
+    LOGIx("Querying (%1%,%2%) extent %3% => %4% hit(s).", lng, lat, ex, reply_obj_index);
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE2), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
-        /*boost::crc_32_type result;
+        boost::crc_32_type result;
         result.process_bytes(compressed, compressed_size);
         auto crc = result.checksum();
-        std::cout << boost::format("CRC: %1%\n") % crc;*/
+        LOGIx("CRC: %1%", crc);
 
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
@@ -297,23 +297,23 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
-            % __func__
-            % compressed_size;
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
     }
     if (reply_obj_dropped_count) {
-        std::cerr << boost::format("%1%: %2% cells dropped. (max: %3%) Compressed size is %4% bytes.\n")
-            % __func__
-            % reply_obj_dropped_count
-            % boost::size(reply->obj)
-            % compressed_size;
+        LOGE("%1%: %2% cells dropped. (max: %3%) Compressed size is %4% bytes.",
+             __func__,
+             reply_obj_dropped_count,
+             boost::size(reply->obj),
+             compressed_size);
     }
 }
 
 void udp_server::send_track_object_coords(int track_object_id, int track_object_ship_id) {
     sea_object* obj = nullptr;
     if (track_object_id && track_object_ship_id) {
-        std::cerr << boost::format("track_object_id and track_object_ship_id both set. tracking ignored\n");
+        LOGE("track_object_id and track_object_ship_id both set. tracking ignored");
         return;
     } else if (track_object_id) {
         obj = sea_->get_object(track_object_id);
@@ -321,9 +321,9 @@ void udp_server::send_track_object_coords(int track_object_id, int track_object_
         obj = sea_->get_object_by_type(track_object_ship_id);
     }
     if (!obj) {
-        std::cerr << boost::format("Tracking object cannot be found. (track_object_id=%1%, track_object_ship_id=%2%)\n")
-            % track_object_id
-            % track_object_ship_id;
+        LOGE("Tracking object cannot be found. (track_object_id=%1%, track_object_ship_id=%2%)",
+             track_object_id,
+             track_object_ship_id);
     }
     boost::shared_ptr<LWPTTLTRACKCOORDS> reply(new LWPTTLTRACKCOORDS);
     memset(reply.get(), 0, sizeof(LWPTTLTRACKCOORDS));
@@ -342,9 +342,9 @@ void udp_server::send_track_object_coords(int track_object_id, int track_object_
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
-            % __func__
-            % compressed_size;
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
     }
 }
 
@@ -376,9 +376,9 @@ void udp_server::send_seaport(float lng, float lat, float ex, int view_scale) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("%1%: LZ4_compress_default() error! - %2%\n")
-            % __func__
-            % compressed_size;
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
     }
 }
 
@@ -400,7 +400,7 @@ void udp_server::send_seaarea(float lng, float lat) {
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred));
     } else {
-        std::cerr << boost::format("send_seaarea: LZ4_compress_default() error! - %1%\n") % compressed_size;
+        LOGE("send_seaarea: LZ4_compress_default() error! - %1%", compressed_size);
     }
 }
 
@@ -409,9 +409,9 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
         unsigned char type = *reinterpret_cast<unsigned char*>(recv_buffer_.data() + 0x00); // type
         if (type == 110) {
             // LPGP_LWPTTLPING
-            //std::cout << "PING received." << std::endl;
+            LOGIx("PING received.");
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
-            
+
             send_full_state(p->lng, p->lat, p->ex, p->view_scale); // ships (vessels)
             if (p->ping_seq % 32 == 0) {
                 send_static_state2(p->lng, p->lat, p->ex, p->view_scale); // land cells
@@ -421,7 +421,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             if (p->track_object_id || p->track_object_ship_id) {
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id); // tracking info
             }
-            //std::cout << "STATE replied." << std::endl;
+            LOGIx("STATE replied.");
         }
         start_receive();
     }
@@ -434,7 +434,7 @@ std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seapo
     std::vector<seaport_object_public::point_t> point_list;
     for (auto v : seaport_id_list) {
         point_list.emplace_back(seaport_->get_seaport_point(v));
-        std::cout << boost::format("Seaport ID: %1%\n") % v;
+        LOGI("Seaport ID: %1%", v);
     }
     std::vector<xy32> wp_total;
     for (size_t i = 0; i < point_list.size() - 1; i++) {
@@ -442,7 +442,7 @@ std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seapo
         if (wp.size() >= 2) {
             std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
         } else {
-            std::cerr << "Waypoints of less than 2 detected. Route could not be found." << std::endl;
+            LOGE("Waypoints of less than 2 detected. Route could not be found.");
             return std::shared_ptr<route>();
         }
     }
@@ -458,7 +458,7 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
     std::vector<seaport_object_public::point_t> point_list;
     for (auto v : seaport_list) {
         point_list.emplace_back(seaport_->get_seaport_point(v.c_str()));
-        std::cout << boost::format("Seaport: %1%\n") % v.c_str();
+        LOGI("Seaport: %1%", v);
     }
     std::vector<xy32> wp_total;
     for (size_t i = 0; i < point_list.size() - 1; i++) {
@@ -466,7 +466,7 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
         if (wp.size() >= 2) {
             std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
         } else {
-            std::cerr << "Waypoints of less than 2 detected. Route could not be found." << std::endl;
+            LOGE("Waypoints of less than 2 detected. Route could not be found.");
             return std::shared_ptr<route>();
         }
     }

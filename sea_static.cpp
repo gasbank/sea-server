@@ -21,7 +21,7 @@ int sea_static::lng_to_xc(float lng) const {
 
 int sea_static::lat_to_yc(float lat) const {
     //return static_cast<int >(roundf(res_height / 2 - lat / 90.0f * res_height / 2)) & (res_height - 1);
-    return static_cast<int >(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
+    return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
 }
 
 std::vector<sea_static_object_public> sea_static::query_near_lng_lat_to_packet(float lng, float lat, float ex) const {
@@ -47,7 +47,8 @@ std::vector<sea_static_object_public::value_t> sea_static::query_tree(int xc, in
 
 void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const char* dump_filename) {
     if (rtree_ptr->size() == 0) {
-        printf("R-tree empty. Trying to create R-tree from dump file %s...\n", dump_filename);
+        LOGI("R-tree empty. Trying to create R-tree from dump file %s...",
+             dump_filename);
         int rect_count = 0;
         FILE* fin = fopen(dump_filename, "rb");
         if (fin) {
@@ -64,8 +65,7 @@ void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const
             }
             fclose(fin);
             printf("Max rect R Tree size (after loaded from %s): %zu\n", dump_filename, rtree_ptr->size());
-        }
-        else {
+        } else {
             printf("[Error] Dump file %s not exist!\n", dump_filename);
         }
     }
@@ -73,13 +73,12 @@ void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const
 
 void sea_static::mark_sea_water(sea_static_object_public::rtree_t* rtree) {
     const char* sea_water_dump_filename = "rtree/sea_water_dump.dat";
-    std::cout << boost::format("Checking %1%...\n") % sea_water_dump_filename;
+    LOGI("Checking %1%...", sea_water_dump_filename);
     struct stat stat_buffer;
     if (stat(sea_water_dump_filename, &stat_buffer) != 0) {
         std::unordered_set<int> sea_water_set;
-        std::cout << boost::format("%1% not exists. Creating...\n") % sea_water_dump_filename;
-        std::cout << boost::format("R-tree total node: %1%\n")
-            % rtree->size();
+        LOGI("%1% not exists. Creating...", sea_water_dump_filename);
+        LOGI("R-tree total node: %1%", rtree->size());
         std::vector<sea_static_object_public::rtree_t::const_query_iterator> open_set;
         for (auto it = rtree->qbegin(bgi::intersects(astarrtree::box_t_from_xy(xy32{ 0,0 }))); it != rtree->qend(); it++) {
             sea_water_set.insert(it->second);
@@ -98,9 +97,9 @@ void sea_static::mark_sea_water(sea_static_object_public::rtree_t* rtree) {
                 }
             }
             open_set = next_open_set;
-            std::cout << boost::format("Sea water set size: %1% (%2% %%)\n")
-                % sea_water_set.size()
-                % ((float)sea_water_set.size() / rtree->size() * 100.0f);
+            LOGI("Sea water set size: %1% (%2% %%)",
+                 sea_water_set.size(),
+                 ((float)sea_water_set.size() / rtree->size() * 100.0f));
         }
         sea_water_vector.assign(sea_water_set.begin(), sea_water_set.end());
         std::sort(sea_water_vector.begin(), sea_water_vector.end());
@@ -110,17 +109,11 @@ void sea_static::mark_sea_water(sea_static_object_public::rtree_t* rtree) {
         sea_water_dump_file = 0;
     } else {
         size_t count = stat_buffer.st_size / sizeof(int);
-        std::cout << boost::format("Sea water dump count: %1%\n")
-            % count;
+        LOGI("Sea water dump count: %1%", count);
         FILE* sea_water_dump_file = fopen(sea_water_dump_filename, "rb");
-        //std::vector<int> sea_water_vector(count);
         sea_water_vector.resize(count);
         fread(&sea_water_vector[0], sizeof(int), sea_water_vector.size(), sea_water_dump_file);
-        std::cout << boost::format("Sea water vector count: %1%\n")
-            % sea_water_vector.size();
-        /*sea_water_set.insert(sea_water_vector.begin(), sea_water_vector.end());
-        std::cout << boost::format("Sea water set count: %1%\n")
-            % sea_water_set.size();*/
+        LOGI("Sea water vector count: %1%", sea_water_vector.size());
     }
 }
 
@@ -138,7 +131,7 @@ sea_static::sea_static()
     //, sea_water_set_alloc(sea_water_set_file.get_segment_manager())
     //, sea_water_set(sea_water_set_file.find_or_construct<sea_water_set_t>("set")(int(), std::hash<int>(), std::equal_to<int>(), sea_water_set_alloc))
 {
-    
+
     load_from_dump_if_empty(land_rtree_ptr, "rtree/land_raw_xy32xy32.bin");
     load_from_dump_if_empty(water_rtree_ptr, "rtree/water_raw_xy32xy32.bin");
     mark_sea_water(water_rtree_ptr);
@@ -152,18 +145,18 @@ std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const x
     bool new_from_sea_water = false;
     if (astarrtree::find_nearest_point_if_empty(water_rtree_ptr, new_from, from_box, from_result_s)) {
         new_from_sea_water = is_sea_water(xy32{ new_from.x, new_from.y });
-        std::cout << boost::format("  'From' point changed to (%1%,%2%) [sea water=%3%]\n")
-            % new_from.x
-            % new_from.y
-            % new_from_sea_water;
+        LOGI("  'From' point changed to (%1%,%2%) [sea water=%3%]",
+             new_from.x,
+             new_from.y,
+             new_from_sea_water);
     } else {
         new_from_sea_water = is_sea_water(xy32{ new_from.x, new_from.y });
-        std::cout << boost::format("  'From' point (%1%,%2%) [sea water=%3%]\n")
-            % new_from.x
-            % new_from.y
-            % new_from_sea_water;
+        LOGI("  'From' point (%1%,%2%) [sea water=%3%]",
+             new_from.x,
+             new_from.y,
+             new_from_sea_water);
     }
-    
+
     auto to_box = astarrtree::box_t_from_xy(to);
     std::vector<astarrtree::value_t> to_result_s;
     water_rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
@@ -171,22 +164,22 @@ std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const x
     bool new_to_sea_water = false;
     if (astarrtree::find_nearest_point_if_empty(water_rtree_ptr, new_to, to_box, to_result_s)) {
         new_to_sea_water = is_sea_water(xy32{ new_to.x, new_to.y });
-        std::cout << boost::format("  'To' point changed to (%1%,%2%) [sea water=%3%]\n")
-            % new_to.x
-            % new_to.y
-            % new_to_sea_water;
+        LOGI("  'To' point changed to (%1%,%2%) [sea water=%3%]",
+             new_to.x,
+             new_to.y,
+             new_to_sea_water);
     } else {
         new_to_sea_water = is_sea_water(xy32{ new_to.x, new_to.y });
-        std::cout << boost::format("  'To' point (%1%,%2%) [sea water=%3%]\n")
-            % new_to.x
-            % new_to.y
-            % new_to_sea_water;
+        LOGI("  'To' point (%1%,%2%) [sea water=%3%]",
+             new_to.x,
+             new_to.y,
+             new_to_sea_water);
     }
 
     if (new_from_sea_water && new_to_sea_water) {
         return astarrtree::astar_rtree_memory(water_rtree_ptr, new_from, new_to);
     } else {
-        std::cerr << boost::format("ERROR: Both 'From' and 'To' should be in sea water to generate waypoints!\n");
+        LOGE("ERROR: Both 'From' and 'To' should be in sea water to generate waypoints!");
         return std::vector<xy32>();
     }
 }

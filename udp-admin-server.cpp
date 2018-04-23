@@ -58,9 +58,9 @@ void udp_admin_server::start_receive() {
 
 void udp_admin_server::handle_send(const boost::system::error_code & error, std::size_t bytes_transferred) {
     if (error) {
-        std::cerr << error << std::endl;
+        LOGE("ERROR: %s", error);
     } else {
-        //std::cout << bytes_transferred << " bytes transferred." << std::endl;
+        LOGIx("%1% bytes_transferred", bytes_transferred);
     }
 }
 
@@ -121,7 +121,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
         case 1: // Spawn
         {
             assert(bytes_transferred == sizeof(spawn_command));
-            std::cout << boost::format("Spawn type: %1%\n") % static_cast<int>(cp->type);
+            LOGI("Spawn type: %1%", static_cast<int>(cp->type));
             spawn_command* spawn = reinterpret_cast<spawn_command*>(recv_buffer_.data());;
             int type = 1;
             sea_->spawn(spawn->guid, type, spawn->x, spawn->y, 1.0f, 1.0f);
@@ -130,7 +130,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
         case 2: // Travel To
         {
             assert(bytes_transferred == sizeof(travel_to_command));
-            std::cout << boost::format("Travel To type: %1%\n") % static_cast<int>(cp->type);
+            LOGI("Travel To type: %1%", static_cast<int>(cp->type));
             travel_to_command* spawn = reinterpret_cast<travel_to_command*>(recv_buffer_.data());;
             sea_->travel_to(spawn->guid, spawn->x, spawn->y);
             break;
@@ -138,7 +138,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
         case 3: // Telport To
         {
             assert(bytes_transferred == sizeof(teleport_to_command));
-            std::cout << boost::format("Teleport To type: %1%\n") % static_cast<int>(cp->type);
+            LOGI("Teleport To type: %1%", static_cast<int>(cp->type));
             teleport_to_command* spawn = reinterpret_cast<teleport_to_command*>(recv_buffer_.data());;
             sea_->teleport_to(spawn->guid, spawn->x, spawn->y);
             break;
@@ -146,7 +146,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
         case 4: // Spawn Ship
         {
             assert(bytes_transferred == sizeof(spawn_ship_command));
-            std::cout << boost::format("Spawn Ship type: %1%\n") % static_cast<int>(cp->type);
+            LOGI("Spawn Ship type: %1%", static_cast<int>(cp->type));
             const spawn_ship_command* spawn = reinterpret_cast<spawn_ship_command*>(recv_buffer_.data());;
             xy32 spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
             if (sea_static_->is_water(spawn_pos)) {
@@ -157,7 +157,11 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                 if (spawn->port1_id == -1 || spawn->port2_id == -1) {
                     std::string port1, port2;
                     if (seaport_->get_nearest_two(spawn_pos, id1, port1, id2, port2) == 2) {
-                        std::cout << boost::format("Nearest two ports: %1%(id=%2%), %3%(id=%4%)\n") % port1 % id1 % port2 % id2;
+                        LOGI("Nearest two ports: %1%(id=%2%), %3%(id=%4%)",
+                             port1,
+                             id1,
+                             port2,
+                             id2);
                         new_spawn = true;
                     }
                 }
@@ -175,29 +179,28 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                                                           boost::asio::placeholders::bytes_transferred));
                     }
                 } else {
-                    std::cerr << boost::format("Cannot get nearest two ports! port1_id=%1%, port2_id=%2%\n")
-                        % id1
-                        % id2;
+                    LOGE("Cannot get nearest two ports! port1_id=%1%, port2_id=%2%",
+                         id1,
+                         id2);
                 }
             } else {
-                std::cerr << boost::format("Spawn position should be water. (x=%1%, y=%2%)\n")
-                    % spawn_pos.x
-                    % spawn_pos.y;
+                LOGE("Spawn position should be water. (x=%1%, y=%2%)",
+                     spawn_pos.x,
+                     spawn_pos.y);
             }
             break;
         }
         case 5: // Delete Ship
         {
             assert(bytes_transferred == sizeof(delete_ship_command));
-            std::cout << boost::format("Delete Ship type: %1%\n") % static_cast<int>(cp->type);
+            LOGI("Delete Ship type: %1%", static_cast<int>(cp->type));
             const delete_ship_command* spawn = reinterpret_cast<delete_ship_command*>(recv_buffer_.data());;
             sea_->despawn(spawn->ship_id);
             break;
         }
         default:
         {
-            std::cerr << boost::format("Unknown command packet type: %1%\n")
-                % static_cast<int>(cp->type);
+            LOGE("Unknown command packet type: %1%", static_cast<int>(cp->type));
             break;
         }
         }
