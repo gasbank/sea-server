@@ -40,8 +40,8 @@ namespace ss {
         try {
             return awesome_printf_helper(f % std::forward<T>(t), std::forward<Args>(args)...);
         } catch (boost::io::bad_format_string& e) {
-            LOGE(e.what());
-            LOGE("format: %1%, T: %2%", f, t);
+            std::cerr << e.what() << std::endl;
+            std::cerr << "format: " << f << ", T: " << t << std::endl;
             return "";
         }
     }
@@ -52,8 +52,8 @@ namespace ss {
             boost::format f(fmt);
             stream << awesome_printf_helper(f, std::forward<Arguments>(args)...) << std::endl;
         } catch (boost::io::bad_format_string& e) {
-            LOGE(e.what());
-            LOGE("fmt: %1%", fmt);
+            std::cerr << e.what() << std::endl;
+            std::cerr << "fmt: " << fmt << std::endl;
         }
     }
 
