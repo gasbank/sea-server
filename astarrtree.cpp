@@ -464,7 +464,7 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
         {
             for (size_t i = 0; i < pixel_path_count; i++) {
                 xy32ib* pixel_node = reinterpret_cast<xy32ib*>(ASPathGetNode(pixel_path, i));
-                LOGI("Pixel Path %zu: (%d, %d) [Cell index=%zu]",
+                LOGI("Pixel Path %1%: (%2%, %3%) [Cell index=%4%]",
                      i,
                      pixel_node->p.x,
                      pixel_node->p.y,
