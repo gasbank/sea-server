@@ -457,7 +457,7 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
     ASPath pixel_path = ASPathCreate(&PathNodeSource, &pws, &from_rect, &to_rect);
     size_t pixel_path_count = ASPathGetCount(pixel_path);
     if (pixel_path_count > 0) {
-        LOGI("Path Count: %zu", pixel_path_count);
+        LOGI("Path Count: %1%", pixel_path_count);
         float pixel_path_cost = ASPathGetCost(pixel_path);
         LOGI("Path Cost: %f", pixel_path_cost);
         /*if (pixel_path_cost < 6000)*/
@@ -558,7 +558,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
              distance);
 
     std::vector<xy32> waypoints;
-    ss::LOGI("R Tree size: %zu", rtree_ptr->size());
+    ss::LOGI("R Tree size: %1%", rtree_ptr->size());
     if (rtree_ptr->size() == 0) {
         return waypoints;
     }
@@ -596,14 +596,14 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
         ASPath path = ASPathCreate(&PathNodeSource, rtree_ptr, &from_rect, &to_rect);
         size_t pathCount = ASPathGetCount(path);
         if (pathCount > 0) {
-            LOGI("Cell Path Count: %zu", pathCount);
+            LOGI("Cell Path Count: %1%", pathCount);
             float pathCost = ASPathGetCost(path);
             LOGI("Cell Path Cost: %f", pathCost);
             /*if (pathCost < 6000)*/
             {
                 for (size_t i = 0; i < pathCount; i++) {
                     xy32xy32* node = reinterpret_cast<xy32xy32*>(ASPathGetNode(path, i));
-                    LOGI("Cell Path %zu: (%d, %d)-(%d, %d) [%d x %d = %d]",
+                    LOGI("Cell Path %1%: (%2%, %3%)-(%4%, %5%) [%6% x %7% = %8%]",
                          i,
                          node->xy0.x,
                          node->xy0.y,

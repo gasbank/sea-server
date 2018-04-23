@@ -64,7 +64,7 @@ void load_from_dump_if_empty(sea_static_object_public::rtree_t* rtree_ptr, const
                 }
             }
             fclose(fin);
-            LOGI("Max rect R Tree size (after loaded from %s): %zu", dump_filename, rtree_ptr->size());
+            LOGI("Max rect R Tree size (after loaded from %1%): %2%", dump_filename, rtree_ptr->size());
         } else {
             LOGE("[Error] Dump file %s not exist!", dump_filename);
         }
