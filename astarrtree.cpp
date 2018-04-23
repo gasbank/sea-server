@@ -88,13 +88,13 @@ void AddNeighborWithLog(ASNeighborList neighbors, xy32ib* n, pixel_waypoint_sear
         cb(neighbors, n, pws);
     } else {
         ASNeighborListAdd(neighbors, &neighbor, xyib_distance(*n, neighbor));
-        LOGI("Neighbor of (%5d,%5d)[%5d] : (%5d,%5d)[%5d]",
-             n->p.x,
-             n->p.y,
-             n->i,
-             x,
-             y,
-             i);
+        LOGIx("Neighbor of (%5d,%5d)[%5d] : (%5d,%5d)[%5d]",
+              n->p.x,
+              n->p.y,
+              n->i,
+              x,
+              y,
+              i);
     }
 }
 
