@@ -37,13 +37,24 @@ namespace ss {
 
     template<class T, class... Args>
     std::string awesome_printf_helper(boost::format& f, T&& t, Args&&... args) {
-        return awesome_printf_helper(f % std::forward<T>(t), std::forward<Args>(args)...);
+        try {
+            return awesome_printf_helper(f % std::forward<T>(t), std::forward<Args>(args)...);
+        } catch (boost::io::bad_format_string& e) {
+            LOGE(e.what());
+            LOGE("format: %1%, T: %2%", f, t);
+            return "";
+        }
     }
 
     template<typename... Arguments>
     void LOG(std::ostream& stream, const std::string& fmt, Arguments&&... args) {
-        boost::format f(fmt);
-        stream << awesome_printf_helper(f, std::forward<Arguments>(args)...) << std::endl;
+        try {
+            boost::format f(fmt);
+            stream << awesome_printf_helper(f, std::forward<Arguments>(args)...) << std::endl;
+        } catch (boost::io::bad_format_string& e) {
+            LOGE(e.what());
+            LOGE("fmt: %1%", fmt);
+        }
     }
 
     template<typename... Arguments>
