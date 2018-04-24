@@ -14,8 +14,10 @@ namespace ss {
         fxfyvxvy get_pos(bool& finished) const;
         float get_left() const;
         void reverse();
+        std::vector<xy32> clone_waypoints() const;
     private:
         std::vector<float> accum_distance;
+        mutable spinlock waypoints_spinlock;
         std::vector<xy32> waypoints;
         float velocity;
         float param;

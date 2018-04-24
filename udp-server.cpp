@@ -348,6 +348,40 @@ void udp_server::send_track_object_coords(int track_object_id, int track_object_
     }
 }
 
+void udp_server::send_waypoints(int ship_id) {
+    auto r = find_route_map_by_ship_id(ship_id);
+    if (!r) {
+        LOGE("Ship id %1%'s route cannot be found.", ship_id);
+        return;
+    }
+    boost::shared_ptr<LWPTTLWAYPOINTS> reply(new LWPTTLWAYPOINTS);
+    memset(reply.get(), 0, sizeof(LWPTTLWAYPOINTS));
+    reply->type = 117; // LPGP_LWPTTLWAYPOINTS
+    reply->ship_id = ship_id;
+    auto waypoints = r->clone_waypoints();
+    auto copy_len = std::min(waypoints.size(), boost::size(reply->waypoints));
+    reply->count = boost::numeric_cast<int>(copy_len);
+    for (size_t i = 0; i < copy_len; i++) {
+        reply->waypoints[i].x = waypoints[i].x;
+        reply->waypoints[i].y = waypoints[i].y;
+    }
+    // send
+    char compressed[1500];
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLWAYPOINTS), static_cast<int>(boost::size(compressed)));
+    if (compressed_size > 0) {
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                              remote_endpoint_,
+                              boost::bind(&udp_server::handle_send,
+                                          this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    } else {
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
+    }
+}
+
 void udp_server::send_seaport(float lng, float lat, float ex, int view_scale) {
     auto sop_list = seaport_->query_near_lng_lat_to_packet(lng, lat, static_cast<int>(ex / 2) * view_scale);
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
@@ -411,7 +445,6 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             // LPGP_LWPTTLPING
             LOGIx("PING received.");
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
-
             send_full_state(p->lng, p->lat, p->ex, p->view_scale); // ships (vessels)
             if (p->ping_seq % 32 == 0) {
                 send_static_state2(p->lng, p->lat, p->ex, p->view_scale); // land cells
@@ -421,7 +454,13 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             if (p->track_object_id || p->track_object_ship_id) {
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id); // tracking info
             }
-            LOGIx("STATE replied.");
+            LOGIx("PING replied with states.");
+        } else if (type == 116) {
+            // LPGP_LWPTTLREQUESTWAYPOINTS
+            LOGI("REQUESTWAYPOINTS received.");
+            auto p = reinterpret_cast<LWPTTLREQUESTWAYPOINTS*>(recv_buffer_.data());
+            send_waypoints(p->ship_id);
+            LOGI("REQUESTWAYPOINTS replied with WAYPOINTS.");
         }
         start_receive();
     }
@@ -473,4 +512,16 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
     std::shared_ptr<route> r(new route(wp_total));
     r->set_velocity(1);
     return r;
+}
+
+std::shared_ptr<const route> udp_server::find_route_map_by_ship_id(int ship_id) const {
+    auto obj = sea_->get_object_by_type(ship_id);
+    if (!obj) {
+        LOGE("Sea object %1% not found.", ship_id);
+    }
+    auto it = route_map_.find(obj->get_id());
+    if (it != route_map_.end()) {
+        return it->second;
+    }
+    return std::shared_ptr<const route>();
 }

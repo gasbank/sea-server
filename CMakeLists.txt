@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(sea-server)
 set(Boost_USE_STATIC_LIBS ON)
-FIND_PACKAGE( Boost 1.58 COMPONENTS system date_time regex filesystem REQUIRED )
+FIND_PACKAGE( Boost 1.58 COMPONENTS system date_time regex filesystem atomic REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 if (MSVC)
     add_definitions(
@@ -77,6 +77,8 @@ region.hpp
 region.cpp
 seaarea.hpp
 seaarea.cpp
+sealog.hpp
+spinlock.hpp
 )
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)

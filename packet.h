@@ -99,7 +99,7 @@ typedef struct _LWPTTLSEAAREA {
     char name[128];
 } LWPTTLSEAAREA;
 
-// PING
+// UDP
 typedef struct _LWPTTLPING {
     unsigned char type;
     unsigned char padding0;
@@ -111,6 +111,29 @@ typedef struct _LWPTTLPING {
     int track_object_ship_id;
     int view_scale;
 } LWPTTLPING;
+
+// UDP
+typedef struct _LWPTTLREQUESTWAYPOINTS {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    int ship_id;
+} LWPTTLREQUESTWAYPOINTS;
+
+// UDP
+typedef struct _LWPTTLWAYPOINTS {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    int ship_id;
+    int count;
+    struct {
+        int x;
+        int y;
+    } waypoints[128];
+} LWPTTLWAYPOINTS;
 /*
 * END: should sync with packet.h in sea-server
 */

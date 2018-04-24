@@ -29,6 +29,8 @@ namespace ss {
         void send_seaport(float lng, float lat, float ex, int view_scale);
         void send_track_object_coords(int track_object_id, int track_object_ship_id);
         void send_seaarea(float lng, float lat);
+        void send_waypoints(int ship_id);
+        std::shared_ptr<const route> find_route_map_by_ship_id(int ship_id) const;
 
         // How to test handle_receive():
         // $ perl -e "print pack('ff',10.123,20.456)" > /dev/udp/127.0.0.1/3100
@@ -50,7 +52,7 @@ namespace ss {
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
         std::shared_ptr<region> region_;
-        std::unordered_map<int, std::shared_ptr<route> > route_map_;
+        std::unordered_map<int, std::shared_ptr<route> > route_map_; // id -> route
         int tick_seq_;
     };
 }

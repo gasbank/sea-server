@@ -68,11 +68,20 @@ float route::get_left() const {
 }
 
 void route::reverse() {
+    waypoints_spinlock.lock();
     std::reverse(waypoints.begin(), waypoints.end());
+    waypoints_spinlock.unlock();
     auto total_length = *accum_distance.rbegin();
     for (size_t i = 0; i < accum_distance.size(); i++) {
         accum_distance[i] = total_length - accum_distance[i];
     }
     std::reverse(accum_distance.begin(), accum_distance.end());
     param = total_length - param;
+}
+
+std::vector<xy32> route::clone_waypoints() const {
+    waypoints_spinlock.lock();
+    auto r = waypoints;
+    waypoints_spinlock.unlock();
+    return r;
 }
