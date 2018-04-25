@@ -66,40 +66,37 @@ int RectDistance(const xy32xy32* a, const xy32xy32* b) {
 }
 
 float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
-    xy32xy32* from = reinterpret_cast<xy32xy32*>(fromNode);
-    xy32xy32* to = reinterpret_cast<xy32xy32*>(toNode);
-    // TOO SLOW (float??)
-    /*float fromMedX = (from->xy1.x - from->xy0.x) / 2.0f;
-    float fromMedY = (from->xy1.y - from->xy0.y) / 2.0f;
-    float toMedX = (to->xy1.x - to->xy0.x) / 2.0f;
-    float toMedY = (to->xy1.y - to->xy0.y) / 2.0f;*/
+    const xy32xy32* from = reinterpret_cast<xy32xy32*>(fromNode);
+    const xy32xy32* to = reinterpret_cast<xy32xy32*>(toNode);
 
+    // [1] Cell Midpoint Distance Method
+    // TOO SLOW; illogical on very big cells
+    const float fromMedX = (from->xy1.x - from->xy0.x) / 2.0f;
+    const float fromMedY = (from->xy1.y - from->xy0.y) / 2.0f;
+    const float toMedX = (to->xy1.x - to->xy0.x) / 2.0f;
+    const float toMedY = (to->xy1.y - to->xy0.y) / 2.0f;
     /*
     return fabsf(fromMedX - toMedX) + fabsf(fromMedY - toMedY);*/
 
-    // less cost if moving to the same direction...
+    // [2] Global Direction Following Method
+    // Less cost if moving to the same direction... (kind of greedy)
     const xy32xy32* from_rect = &reinterpret_cast<PathfindContext*>(context)->from_rect;
     const xy32xy32* to_rect = &reinterpret_cast<PathfindContext*>(context)->to_rect;
     
     const float dir_rect = atan2f(static_cast<float>(to_rect->xy0.y - from_rect->xy0.y),
                                   static_cast<float>(to_rect->xy0.x - from_rect->xy0.x));
-    const float dir = atan2f(static_cast<float>(to->xy0.y - from->xy0.y),
-                             static_cast<float>(to->xy0.x - from->xy0.x));
-    return fabsf(dir_rect - dir);
+    /*const float dir = atan2f(static_cast<float>(to->xy0.y - from->xy0.y),
+                             static_cast<float>(to->xy0.x - from->xy0.x));*/
+    const float dir = atan2f(static_cast<float>(toMedY - fromMedY),
+                             static_cast<float>(toMedX - fromMedX));
+    //return fabsf(dir_rect - dir);
 
-    // INTEGER VERSION
-    /*const int fromMedX = (from->xy1.x - from->xy0.x) / 2;
-    const int fromMedY = (from->xy1.y - from->xy0.y) / 2;
-    const int toMedX = (to->xy1.x - to->xy0.x) / 2;
-    const int toMedY = (to->xy1.y - to->xy0.y) / 2;
-    return static_cast<float>(abs(fromMedX - toMedX) + abs(fromMedY - toMedY));*/
-
+    // [3] Simple Manhattan Distance Method
     // INCORRECT on long cells
-    //return static_cast<float>(abs(from->xy0.x - to->xy0.x) + abs(from->xy0.y - to->xy0.y));
-    // THIRD TRY...FAILED. Return all 0
+    return static_cast<float>(abs(from->xy0.x - to->xy0.x) + abs(from->xy0.y - to->xy0.y));
     
-    /*
-    return static_cast<float>(std::max(0, RectDistance(to, to_rect) - RectDistance(from, from_rect)));*/
+    // [4] Rect Distance Method
+    //return static_cast<float>(RectDistance(from, to) + RectDistance(to, to_rect));
 
     // No cost
     //return 0;
