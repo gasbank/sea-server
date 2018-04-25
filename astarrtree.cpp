@@ -33,14 +33,22 @@ box_t box_t_from_xyxy(const xy32xy32& v) {
 }
 
 void RTreePathNodeNeighbors(ASNeighborList neighbors, void *node, void *context) {
-    xy32xy32* n = reinterpret_cast<xy32xy32*>(node);
+    auto n = reinterpret_cast<const xy32xy32xy32*>(node);
     rtree_t* rtree_ptr = reinterpret_cast<PathfindContext*>(context)->rtree;
-    box_t query_box = box_t_from_xyxy(*n);
+    box_t query_box = box_t_from_xyxy(n->box);
     std::vector<value_t> result_s;
     rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     for (const auto& v : result_s) {
-        auto n2 = xyxy_from_box_t(v.first);
-        ASNeighborListAdd(neighbors, &n2, 1);
+        auto xyxy = xyxy_from_box_t(v.first);
+        const xy32 enter_point{
+            boost::algorithm::clamp(n->point.x, xyxy.xy0.x, xyxy.xy1.x - 1),
+            boost::algorithm::clamp(n->point.y, xyxy.xy0.y, xyxy.xy1.y - 1),
+        };
+        xy32xy32xy32 n2 = { xyxy, enter_point };
+        const int dx = enter_point.x - n->point.x;
+        const int dy = enter_point.y - n->point.y;
+        const float edge_cost = sqrtf(static_cast<float>(dx * dx + dy * dy));
+        ASNeighborListAdd(neighbors, &n2, edge_cost);
     }
 }
 
@@ -62,52 +70,68 @@ int RectDistance(const xy32xy32* a, const xy32xy32* b) {
     } else if (b_and_a_y < 0) {
         dy = -b_and_a_y;
     }
+    assert(dx >= 0);
+    assert(dy >= 0);
     return dx + dy;
 }
 
 float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
-    const xy32xy32* from = reinterpret_cast<xy32xy32*>(fromNode);
-    const xy32xy32* to = reinterpret_cast<xy32xy32*>(toNode);
+    const auto from = reinterpret_cast<const xy32xy32xy32*>(fromNode);
+    const auto to = reinterpret_cast<const xy32xy32xy32*>(toNode);
 
     // [1] Cell Midpoint Distance Method
     // TOO SLOW; illogical on very big cells
-    const float fromMedX = (from->xy1.x - from->xy0.x) / 2.0f;
-    const float fromMedY = (from->xy1.y - from->xy0.y) / 2.0f;
-    const float toMedX = (to->xy1.x - to->xy0.x) / 2.0f;
-    const float toMedY = (to->xy1.y - to->xy0.y) / 2.0f;
+    const auto fromMedX = (from->box.xy1.x - from->box.xy0.x) / 2.0f;
+    const auto fromMedY = (from->box.xy1.y - from->box.xy0.y) / 2.0f;
+    const auto toMedX = (to->box.xy1.x - to->box.xy0.x) / 2.0f;
+    const auto toMedY = (to->box.xy1.y - to->box.xy0.y) / 2.0f;
     /*
     return fabsf(fromMedX - toMedX) + fabsf(fromMedY - toMedY);*/
 
     // [2] Global Direction Following Method
     // Less cost if moving to the same direction... (kind of greedy)
-    const xy32xy32* from_rect = &reinterpret_cast<PathfindContext*>(context)->from_rect;
-    const xy32xy32* to_rect = &reinterpret_cast<PathfindContext*>(context)->to_rect;
-    
-    const float dir_rect = atan2f(static_cast<float>(to_rect->xy0.y - from_rect->xy0.y),
-                                  static_cast<float>(to_rect->xy0.x - from_rect->xy0.x));
+    const auto global_from_rect = &reinterpret_cast<PathfindContext*>(context)->from_rect;
+    const auto global_to_rect = &reinterpret_cast<PathfindContext*>(context)->to_rect;
+
+    const auto dir_rect = atan2f(static_cast<float>(global_to_rect->xy0.y - global_from_rect->xy0.y),
+                                 static_cast<float>(global_to_rect->xy0.x - global_from_rect->xy0.x));
     /*const float dir = atan2f(static_cast<float>(to->xy0.y - from->xy0.y),
                              static_cast<float>(to->xy0.x - from->xy0.x));*/
-    const float dir = atan2f(static_cast<float>(toMedY - fromMedY),
-                             static_cast<float>(toMedX - fromMedX));
+    const auto dir = atan2f(static_cast<float>(toMedY - fromMedY),
+                            static_cast<float>(toMedX - fromMedX));
     //return fabsf(dir_rect - dir);
 
     // [3] Simple Manhattan Distance Method
     // INCORRECT on long cells
-    return static_cast<float>(abs(from->xy0.x - to->xy0.x) + abs(from->xy0.y - to->xy0.y));
-    
+    //return static_cast<float>(abs(from->xy0.x - to->xy0.x) + abs(from->xy0.y - to->xy0.y));
+
     // [4] Rect Distance Method
     //return static_cast<float>(RectDistance(from, to) + RectDistance(to, to_rect));
 
-    // No cost
+    // [5] Rect Distance Method (Revised)
+    const auto from_cost = RectDistance(&from->box, global_to_rect);
+    const auto to_cost = RectDistance(&to->box, global_to_rect);
+    const auto from_to_cost = RectDistance(&from->box, &to->box);
+    //return static_cast<float>(from_to_cost != 0 ? FLT_MAX : to_cost);
+
+    // [6] Enter Point Distance Method
+    const auto enter_point_dx = from->point.x - to->point.x;
+    const auto enter_point_dy = from->point.y - to->point.y;
+    const auto enter_point_dist = sqrtf(static_cast<float>(enter_point_dx * enter_point_dx + enter_point_dy * enter_point_dy));
+    // 'from_to_cast' is a pentalty cost nonzero penalty cost.
+    // The penalty cost is non-zero only if 'fromNode' and 'toNode' are not neighboring.
+    return enter_point_dist + from_to_cost;
+
+    // [7] No cost
     //return 0;
 }
 
 int RTreePathNodeComparator(void *node1, void *node2, void *context) {
-    xy32xy32* n1 = reinterpret_cast<xy32xy32*>(node1);
-    int64_t n1v = (static_cast<int64_t>(n1->xy0.y) << 32) | static_cast<int64_t>(n1->xy0.x);
-    xy32xy32* n2 = reinterpret_cast<xy32xy32*>(node2);
-    int64_t n2v = (static_cast<int64_t>(n2->xy0.y) << 32) | static_cast<int64_t>(n2->xy0.x);
-    int64_t d = n1v - n2v;
+    const auto n1 = reinterpret_cast<const xy32xy32xy32*>(node1);
+    const auto n1v = (static_cast<int64_t>(n1->box.xy0.y) << 32) | static_cast<int64_t>(n1->box.xy0.x);
+    const auto n2 = reinterpret_cast<const xy32xy32xy32*>(node2);
+    const auto n2v = (static_cast<int64_t>(n2->box.xy0.y) << 32) | static_cast<int64_t>(n2->box.xy0.x);
+    const auto d = n1v - n2v;
     if (d == 0) {
         return 0;
     } else if (d > 0) {
@@ -118,9 +142,9 @@ int RTreePathNodeComparator(void *node1, void *node2, void *context) {
 }
 
 float xyib_distance(const xy32ib& a, const xy32ib& b) {
-    int dx = a.p.x - b.p.x;
-    int dy = a.p.y - b.p.y;
-    return static_cast<float>(abs(dx) + abs(dy)); // sqrtf(static_cast<float>(dx * dx + dy * dy));
+    const int dx = a.p.x - b.p.x;
+    const int dy = a.p.y - b.p.y;
+    return sqrtf(static_cast<float>(dx * dx + dy * dy));
 }
 
 struct pixel_waypoint_search {
@@ -638,15 +662,19 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
         // Phase 1 - R Tree rectangular node searching
         ASPathNodeSource PathNodeSource =
         {
-            sizeof(xy32xy32),
+            sizeof(xy32xy32xy32),
             RTreePathNodeNeighbors,
             RTreePathNodeHeuristic,
             NULL,
             RTreePathNodeComparator
         };
-        xy32xy32 from_rect = xyxy_from_box_t(from_result_s[0].first);
-        xy32xy32 to_rect = xyxy_from_box_t(to_result_s[0].first);
-        PathfindContext context{ from_rect, to_rect, rtree_ptr };
+        xy32xy32xy32 from_rect = { xyxy_from_box_t(from_result_s[0].first), from };
+        xy32xy32xy32 to_rect = { xyxy_from_box_t(to_result_s[0].first), to };
+        PathfindContext context{
+            { { from.x,from.y },{ from.x + 1, from.y + 1 } },
+            { { to.x,to.y },{ to.x + 1, to.y + 1 } },
+            rtree_ptr
+        };
         ASPath path = ASPathCreate(&PathNodeSource, &context, &from_rect, &to_rect);
         size_t pathCount = ASPathGetCount(path);
         if (pathCount > 0) {

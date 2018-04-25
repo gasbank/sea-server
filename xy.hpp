@@ -27,6 +27,11 @@ struct xy32xy32 {
     xy32 xy1;
 };
 
+struct xy32xy32xy32 {
+    xy32xy32 box;
+    xy32 point;
+};
+
 struct xy32i {
     xy32 p;
     size_t i;
