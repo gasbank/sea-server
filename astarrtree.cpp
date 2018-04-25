@@ -487,7 +487,8 @@ void RTreePixelPathNodeNeighborsSuboptimal(ASNeighborList neighbors, void *node,
 float RTreePixelPathNodeHeuristic(void *fromNode, void *toNode, void *context) {
     xy32ib* from = reinterpret_cast<xy32ib*>(fromNode);
     xy32ib* to = reinterpret_cast<xy32ib*>(toNode);
-    return static_cast<float>(abs(from->p.x - to->p.x) + abs(from->p.y - to->p.y));
+    return xyib_distance(*from, *to);
+    //return static_cast<float>(abs(from->p.x - to->p.x) + abs(from->p.y - to->p.y));
 }
 
 int RTreePixelPathNodeComparator(void *node1, void *node2, void *context) {
@@ -541,11 +542,11 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
         {
             for (size_t i = 0; i < pixel_path_count; i++) {
                 xy32ib* pixel_node = reinterpret_cast<xy32ib*>(ASPathGetNode(pixel_path, i));
-                LOGI("Pixel Path %1%: (%2%, %3%) [Cell index=%4%]",
-                     i,
-                     pixel_node->p.x,
-                     pixel_node->p.y,
-                     pixel_node->i);
+                LOGIx("Pixel Path %1%: (%2%, %3%) [Cell index=%4%]",
+                      i,
+                      pixel_node->p.x,
+                      pixel_node->p.y,
+                      pixel_node->i);
                 waypoints.push_back(pixel_node->p);
             }
         }
@@ -685,15 +686,15 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
             {
                 for (size_t i = 0; i < pathCount; i++) {
                     xy32xy32* node = reinterpret_cast<xy32xy32*>(ASPathGetNode(path, i));
-                    LOGI("Cell Path %1%: (%2%, %3%)-(%4%, %5%) [%6% x %7% = %8%]",
-                         i,
-                         node->xy0.x,
-                         node->xy0.y,
-                         node->xy1.x,
-                         node->xy1.y,
-                         node->xy1.x - node->xy0.x,
-                         node->xy1.y - node->xy0.y,
-                         (node->xy1.x - node->xy0.x) * (node->xy1.y - node->xy0.y));
+                    LOGIx("Cell Path %1%: (%2%, %3%)-(%4%, %5%) [%6% x %7% = %8%]",
+                          i,
+                          node->xy0.x,
+                          node->xy0.y,
+                          node->xy1.x,
+                          node->xy1.y,
+                          node->xy1.x - node->xy0.x,
+                          node->xy1.y - node->xy0.y,
+                          (node->xy1.x - node->xy0.x) * (node->xy1.y - node->xy0.y));
                 }
             }
             // Phase 2 - per-pixel node searching

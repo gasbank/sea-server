@@ -458,10 +458,10 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             LOGIx("PING replied with states.");
         } else if (type == 116) {
             // LPGP_LWPTTLREQUESTWAYPOINTS
-            LOGI("REQUESTWAYPOINTS received.");
+            LOGIx("REQUESTWAYPOINTS received.");
             auto p = reinterpret_cast<LWPTTLREQUESTWAYPOINTS*>(recv_buffer_.data());
             send_waypoints(p->ship_id);
-            LOGI("REQUESTWAYPOINTS replied with WAYPOINTS.");
+            LOGIx("REQUESTWAYPOINTS replied with WAYPOINTS.");
         }
         start_receive();
     }
