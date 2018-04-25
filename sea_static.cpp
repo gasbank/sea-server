@@ -112,7 +112,13 @@ void sea_static::mark_sea_water(sea_static_object_public::rtree_t* rtree) {
         LOGI("Sea water dump count: %1%", count);
         FILE* sea_water_dump_file = fopen(sea_water_dump_filename, "rb");
         sea_water_vector.resize(count);
-        fread(&sea_water_vector[0], sizeof(int), sea_water_vector.size(), sea_water_dump_file);
+        auto read_sea_water_vector_count = fread(&sea_water_vector[0], sizeof(int), sea_water_vector.size(), sea_water_dump_file);
+        if (read_sea_water_vector_count != sea_water_vector.size()) {
+            LOGE("Sea water dump file read count error! (Expected: %1%, Actual: %2%) Aborting...",
+                 sea_water_vector.size(),
+                 read_sea_water_vector_count);
+            abort();
+        }
         LOGI("Sea water vector count: %1%", sea_water_vector.size());
     }
 }
