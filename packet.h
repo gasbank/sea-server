@@ -5,9 +5,9 @@
 */
 // UDP
 typedef struct _LWPTTLFULLSTATEOBJECT {
-    float x0, y0;
-    float x1, y1;
-    float vx, vy;
+    float fx0, fy0;
+    float fx1, fy1;
+    float fvx, fvy;
     int id;
     int type;
     char guid[64];
@@ -44,10 +44,10 @@ typedef struct _LWPTTLSTATICSTATE {
 
 // UDP
 typedef struct _LWPTTLSTATICOBJECT2 {
-    char x0;
-    char y0;
-    char x1;
-    char y1;
+    signed char x_scaled_offset_0;
+    signed char y_scaled_offset_0;
+    signed char x_scaled_offset_1;
+    signed char y_scaled_offset_1;
 } LWPTTLSTATICOBJECT2;
 
 // UDP
@@ -58,6 +58,7 @@ typedef struct _LWPTTLSTATICSTATE2 {
     unsigned char padding2;
     int xc0;
     int yc0;
+    int view_scale;
     int count;
     LWPTTLSTATICOBJECT2 obj[256+128];
 } LWPTTLSTATICSTATE2;

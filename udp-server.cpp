@@ -141,12 +141,12 @@ void udp_server::send_full_state(float lng, float lat, float ex, int view_scale)
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
     size_t reply_obj_index = 0;
     for (sea_object_public const& v : sop_list) {
-        reply->obj[reply_obj_index].x0 = v.x;
-        reply->obj[reply_obj_index].y0 = v.y;
-        reply->obj[reply_obj_index].x1 = v.x + v.w;
-        reply->obj[reply_obj_index].y1 = v.y + v.h;
-        reply->obj[reply_obj_index].vx = v.vx;
-        reply->obj[reply_obj_index].vy = v.vy;
+        reply->obj[reply_obj_index].fx0 = v.fx;
+        reply->obj[reply_obj_index].fy0 = v.fy;
+        reply->obj[reply_obj_index].fx1 = v.fx + v.fw;
+        reply->obj[reply_obj_index].fy1 = v.fy + v.fh;
+        reply->obj[reply_obj_index].fvx = v.fvx;
+        reply->obj[reply_obj_index].fvy = v.fvy;
         reply->obj[reply_obj_index].id = v.id;
         reply->obj[reply_obj_index].type = v.type;
         strcpy(reply->obj[reply_obj_index].guid, v.guid);
@@ -249,6 +249,7 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
     reply->type = 115; // LPGP_LWPTTLSTATICSTATE2
     reply->xc0 = xc0;
     reply->yc0 = yc0;
+    reply->view_scale = view_scale;
     size_t reply_obj_index = 0;
     size_t reply_obj_dropped_count = 0;
     int view_scale_msb_index = msb_index(view_scale);
@@ -258,23 +259,23 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
         const auto vx1 = v.x1 &~(view_scale - 1);
         const auto vy1 = v.y1 &~(view_scale - 1);
 
-        const auto x0 = boost::numeric_cast<char>(boost::algorithm::clamp(vx0 - xc0, xclo, xchi) >> view_scale_msb_index);
-        const auto x1 = boost::numeric_cast<char>(boost::algorithm::clamp(vx1 - xc0, xclo, xchi) >> view_scale_msb_index);
+        const auto x_scaled_offset_0 = boost::numeric_cast<char>(boost::algorithm::clamp(vx0 - xc0, xclo, xchi) >> view_scale_msb_index);
+        const auto x_scaled_offset_1 = boost::numeric_cast<char>(boost::algorithm::clamp(vx1 - xc0, xclo, xchi) >> view_scale_msb_index);
         // skip degenerated one
-        if (x0 >= x1) {
+        if (x_scaled_offset_0 >= x_scaled_offset_1) {
             continue;
         }
-        const auto y0 = boost::numeric_cast<char>(boost::algorithm::clamp(vy0 - yc0, yclo, ychi) >> view_scale_msb_index);
-        const auto y1 = boost::numeric_cast<char>(boost::algorithm::clamp(vy1 - yc0, yclo, ychi) >> view_scale_msb_index);
+        const auto y_scaled_offset_0 = boost::numeric_cast<char>(boost::algorithm::clamp(vy0 - yc0, yclo, ychi) >> view_scale_msb_index);
+        const auto y_scaled_offset_1 = boost::numeric_cast<char>(boost::algorithm::clamp(vy1 - yc0, yclo, ychi) >> view_scale_msb_index);
         // skip degenerated one
-        if (y0 >= y1) {
+        if (y_scaled_offset_0 >= y_scaled_offset_1) {
             continue;
         }
         if (reply_obj_index < boost::size(reply->obj)) {
-            reply->obj[reply_obj_index].x0 = x0;
-            reply->obj[reply_obj_index].y0 = y0;
-            reply->obj[reply_obj_index].x1 = x1;
-            reply->obj[reply_obj_index].y1 = y1;
+            reply->obj[reply_obj_index].x_scaled_offset_0 = x_scaled_offset_0;
+            reply->obj[reply_obj_index].y_scaled_offset_0 = y_scaled_offset_0;
+            reply->obj[reply_obj_index].x_scaled_offset_1 = x_scaled_offset_1;
+            reply->obj[reply_obj_index].y_scaled_offset_1 = y_scaled_offset_1;
             reply_obj_index++;
         } else {
             reply_obj_dropped_count++;
@@ -473,7 +474,7 @@ std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seapo
     std::vector<seaport_object_public::point_t> point_list;
     for (auto v : seaport_id_list) {
         point_list.emplace_back(seaport_->get_seaport_point(v));
-        LOGI("Seaport ID: %1%", v);
+        LOGI("Seaport ID: %1% (%2%)", v, seaport_->get_seaport_name(v));
     }
     std::vector<xy32> wp_total;
     for (size_t i = 0; i < point_list.size() - 1; i++) {

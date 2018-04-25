@@ -68,6 +68,21 @@ seaport::seaport()
         name_id[sp[i].name] = i;
         id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
+
+    // TESTING-----------------
+    int i = count;
+    seaport_object_public::point_t origin_port{ 0,0 };
+    std::vector<seaport_object_public::value_t> to_be_removed;
+    rtree_ptr->query(bgi::intersects(seaport_object_public::box_t{ {-32,-32},{32,32} }), std::back_inserter(to_be_removed));
+    for (auto e : to_be_removed) {
+        rtree_ptr->remove(e);
+    }
+    rtree_ptr->insert(std::make_pair(origin_port, i));
+    id_name[i] = "Origin Port";
+    name_id["Origin Port"] = i;
+    id_point[i] = origin_port;
+    count++;
+    // TESTING-----------------
 }
 
 const char* seaport::get_seaport_name(int id) const {

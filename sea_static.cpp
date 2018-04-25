@@ -135,6 +135,19 @@ sea_static::sea_static()
     load_from_dump_if_empty(land_rtree_ptr, "rtree/land_raw_xy32xy32.bin");
     load_from_dump_if_empty(water_rtree_ptr, "rtree/water_raw_xy32xy32.bin");
     mark_sea_water(water_rtree_ptr);
+
+    // TESTING-----------------
+    //sea_static_object_public::box_t origin_land_cell{ {-32,-32},{32,32} };
+    sea_static_object_public::box_t origin_land_cell{ { 0,0 },{ 1,1 } };
+    sea_static_object_public::box_t test_land_cell{ { 0,0 },{ 15,15 } };
+    std::vector<sea_static_object_public::value_t> to_be_removed;
+    land_rtree_ptr->query(bgi::contains(origin_land_cell), std::back_inserter(to_be_removed));
+    land_rtree_ptr->query(bgi::contains(test_land_cell), std::back_inserter(to_be_removed));
+    for (auto it : to_be_removed) {
+        land_rtree_ptr->remove(it);
+    }
+    land_rtree_ptr->insert(std::make_pair(test_land_cell, -1));
+    // TESTING-----------------
 }
 
 std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const xy32 & to) const {

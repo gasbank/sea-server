@@ -9,9 +9,9 @@ namespace ss {
     struct sea_object_public {
         int id;
         int type;
-        float x, y;
-        float w, h;
-        float vx, vy;
+        float fx, fy;
+        float fw, fh;
+        float fvx, fvy;
         char guid[64];
     };
 
@@ -27,26 +27,26 @@ namespace ss {
         typedef bg::model::box<point> box;
         typedef std::pair<box, int> value;
     public:
-        sea_object(int id, int type, float x, float y, float w, float h, const value& rtree_value)
+        sea_object(int id, int type, float fx, float fy, float fw, float fh, const value& rtree_value)
             : id(id),
             type(type),
-            x(x),
-            y(y),
-            w(w),
-            h(h),
-            vx(0),
-            vy(0),
+            fx(fx),
+            fy(fy),
+            fw(fw),
+            fh(fh),
+            fvx(0),
+            fvy(0),
             rtree_value(rtree_value),
             state(SOS_SAILING),
             remain_loading_time(0) {
         }
         void fill_sop(sea_object_public& sop) const {
-            sop.x = x + 0.5f;
-            sop.y = y + 0.5f;
-            sop.w = w;
-            sop.h = h;
-            sop.vx = vx;
-            sop.vy = vy;
+            sop.fx = fx;
+            sop.fy = fy;
+            sop.fw = fw;
+            sop.fh = fh;
+            sop.fvx = fvx;
+            sop.fvy = fvy;
             sop.id = id;
             sop.type = type;
             strcpy(sop.guid, guid.c_str());
@@ -60,34 +60,34 @@ namespace ss {
             guid = v;
         }
         void translate_xy(float dxv, float dyv) {
-            set_xy(x + dxv, y + dyv);
+            set_xy(fx + dxv, fy + dyv);
         }
-        void get_xy(float& xv, float& yv) const {
-            xv = this->x;
-            yv = this->y;
+        void get_xy(float& fx, float& fy) const {
+            fx = this->fx;
+            fy = this->fy;
         }
-        void set_xy(float xv, float yv) {
-            x = xv;
-            y = yv;
-            rtree_value.first.min_corner().set<0>(x);
-            rtree_value.first.min_corner().set<1>(y);
-            rtree_value.first.max_corner().set<0>(x + w);
-            rtree_value.first.max_corner().set<1>(y + h);
+        void set_xy(float fx, float fy) {
+            this->fx = fx;
+            this->fy = fy;
+            rtree_value.first.min_corner().set<0>(fx);
+            rtree_value.first.min_corner().set<1>(fy);
+            rtree_value.first.max_corner().set<0>(fx + fw);
+            rtree_value.first.max_corner().set<1>(fy + fh);
         }
-        void set_velocity(float vx, float vy) {
-            this->vx = vx;
-            this->vy = vy;
+        void set_velocity(float fvx, float fvy) {
+            this->fvx = fvx;
+            this->fvy = fvy;
         }
-        void set_destination(float vx, float vy) {
-            this->dest_x = vx;
-            this->dest_y = vy;
+        void set_destination(float fvx, float fvy) {
+            this->dest_fx = fvx;
+            this->dest_fy = fvy;
         }
-        void get_velocity(float& vx, float& vy) const {
-            vx = this->vx;
-            vy = this->vy;
+        void get_velocity(float& fvx, float& fvy) const {
+            fvx = this->fvx;
+            fvy = this->fvy;
         }
         float get_distance_to_destination() const {
-            return sqrtf((dest_x - x) * (dest_x - x) + (dest_y - y) * (dest_y - y));
+            return sqrtf((dest_fx - fx) * (dest_fx - fx) + (dest_fy - fy) * (dest_fy - fy));
         }
         const value& get_rtree_value() const { return rtree_value; }
         void set_state(SEA_OBJECT_STATE state) { this->state = state; }
@@ -110,10 +110,10 @@ namespace ss {
         explicit sea_object() {}
         int id;
         int type;
-        float x, y;
-        float w, h;
-        float vx, vy;
-        float dest_x, dest_y;
+        float fx, fy;
+        float fw, fh;
+        float fvx, fvy;
+        float dest_fx, dest_fy;
         std::string guid;
         value rtree_value;
         SEA_OBJECT_STATE state;
