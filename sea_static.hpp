@@ -8,7 +8,8 @@ namespace ss {
     class sea_static {
     public:
         std::vector<sea_static_object_public> query_near_lng_lat_to_packet(float lng, float lat, float ex) const;
-        std::vector<sea_static_object_public> query_near_to_packet(int xc, int yc, float ex) const;;
+        std::vector<sea_static_object_public> query_near_to_packet(int xc, int yc, float ex) const;
+        std::vector<sea_static_object_public> query_near_to_packet(int xc0, int yc0, int xc1, int yc1) const;
         sea_static();
         std::vector<xy32> calculate_waypoints(const xy32& from, const xy32& to) const;
         std::vector<xy32> calculate_waypoints(const sea_static_object_public::point_t& from, const sea_static_object_public::point_t& to) const;
@@ -18,6 +19,7 @@ namespace ss {
         int lat_to_yc(float lat) const;
     private:
         std::vector<sea_static_object_public::value_t> query_tree(int xc, int yc, int halfex) const;
+        std::vector<sea_static_object_public::value_t> query_tree(int xc0, int yc0, int xc1, int yc1) const;
         void mark_sea_water(sea_static_object_public::rtree_t* rtree);
         bi::managed_mapped_file land_file;
         sea_static_object_public::allocator_t land_alloc;

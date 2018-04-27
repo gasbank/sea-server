@@ -232,13 +232,14 @@ int msb_index(unsigned int v) {
 #endif
 
 void udp_server::send_static_state2(float lng, float lat, float ex, int view_scale) {
-    ex *= view_scale;
     //ex += view_scale;
     //ex += view_scale;
-    const auto xc0 = sea_static_->lng_to_xc(lng) & ~(32 - 1) & ~(view_scale - 1);
-    const auto yc0 = sea_static_->lat_to_yc(lat) & ~(32 - 1) & ~(view_scale - 1);
-    auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex);
-    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f);// +view_scale;
+    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f * view_scale);// +view_scale;
+    const auto xc0 = (sea_static_->lng_to_xc(lng) + half_cell_pixel_extent) & ~(2 * half_cell_pixel_extent - 1) & ~(view_scale - 1);
+    const auto yc0 = (sea_static_->lat_to_yc(lat) + half_cell_pixel_extent) & ~(2 * half_cell_pixel_extent - 1) & ~(view_scale - 1);
+    auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex * view_scale);
+    //auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, xc1, yc1);
+
 
     const auto xclo = -half_cell_pixel_extent;
     const auto xchi = +half_cell_pixel_extent;
@@ -282,7 +283,7 @@ void udp_server::send_static_state2(float lng, float lat, float ex, int view_sca
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    LOGIx("Querying (%1%,%2%) extent %3% => %4% hit(s).", lng, lat, ex, reply_obj_index);
+    LOGIx("Querying (%1%,%2%) extent %3% => %4% hit(s).", lng, lat, ex * view_scale, reply_obj_index);
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE2), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
@@ -447,10 +448,13 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             LOGIx("PING received.");
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
             send_full_state(p->lng, p->lat, p->ex, p->view_scale); // ships (vessels)
-            if (p->ping_seq % 32 == 0) {
+            if (p->static_object) {
                 send_static_state2(p->lng, p->lat, p->ex, p->view_scale); // land cells
-                send_seaport(p->lng, p->lat, p->ex, p->view_scale); // seaports
-                send_seaarea(p->lng, p->lat); // area titles
+            } else {
+                if (p->ping_seq % 32 == 0) {
+                    send_seaport(p->lng, p->lat, p->ex, p->view_scale); // seaports
+                    send_seaarea(p->lng, p->lat); // area titles
+                }
             }
             if (p->track_object_id || p->track_object_ship_id) {
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id); // tracking info

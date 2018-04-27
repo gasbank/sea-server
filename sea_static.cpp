@@ -38,8 +38,21 @@ std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc, i
     return sop_list;
 }
 
+std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc0, int yc0, int xc1, int yc1) const {
+    auto values = query_tree(xc0, yc0, xc1, yc1);
+    std::vector<sea_static_object_public> sop_list;
+    for (std::size_t i = 0; i < values.size(); i++) {
+        sop_list.emplace_back(sea_static_object_public(values[i]));
+    }
+    return sop_list;
+}
+
 std::vector<sea_static_object_public::value_t> sea_static::query_tree(int xc, int yc, int halfex) const {
-    sea_static_object_public::box_t query_box(sea_static_object_public::point_t(xc - halfex, yc - halfex), sea_static_object_public::point_t(xc + halfex, yc + halfex));
+    return query_tree(xc - halfex, yc - halfex, xc + halfex, yc + halfex);
+}
+
+std::vector<sea_static_object_public::value_t> sea_static::query_tree(int xc0, int yc0, int xc1, int yc1) const {
+    sea_static_object_public::box_t query_box(sea_static_object_public::point_t(xc0, yc0), sea_static_object_public::point_t(xc1, yc1));
     std::vector<sea_static_object_public::value_t> result_s;
     land_rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     return result_s;
