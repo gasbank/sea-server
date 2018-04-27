@@ -233,12 +233,12 @@ int msb_index(unsigned int v) {
 
 void udp_server::send_static_state2(float lng, float lat, float ex, int view_scale) {
     ex *= view_scale;
-    ex += view_scale;
-    ex += view_scale;
-    const auto xc0 = sea_static_->lng_to_xc(lng) &~(view_scale - 1);
-    const auto yc0 = sea_static_->lat_to_yc(lat) &~(view_scale - 1);
+    //ex += view_scale;
+    //ex += view_scale;
+    const auto xc0 = sea_static_->lng_to_xc(lng) & ~(32 - 1) & ~(view_scale - 1);
+    const auto yc0 = sea_static_->lat_to_yc(lat) & ~(32 - 1) & ~(view_scale - 1);
     auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex);
-    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f) + view_scale;
+    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f);// +view_scale;
 
     const auto xclo = -half_cell_pixel_extent;
     const auto xchi = +half_cell_pixel_extent;
