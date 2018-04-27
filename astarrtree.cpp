@@ -118,8 +118,8 @@ float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
     const auto enter_point_dx = from->point.x - to->point.x;
     const auto enter_point_dy = from->point.y - to->point.y;
     const auto enter_point_dist = sqrtf(static_cast<float>(enter_point_dx * enter_point_dx + enter_point_dy * enter_point_dy));
-    // 'from_to_cast' is a pentalty cost nonzero penalty cost.
-    // The penalty cost is non-zero only if 'fromNode' and 'toNode' are not neighboring.
+    // 'from_to_cast' is a pentalty cost.
+    // It is non-zero only if 'fromNode' and 'toNode' are not neighbors.
     return enter_point_dist + from_to_cost;
 
     // [7] No cost

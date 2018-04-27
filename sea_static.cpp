@@ -156,7 +156,7 @@ sea_static::sea_static()
     // TESTING-----------------
 }
 
-std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const xy32 & to) const {
+std::vector<xy32> sea_static::calculate_waypoints(const xy32 & from, const xy32 & to) const {
     auto from_box = astarrtree::box_t_from_xy(from);
     std::vector<astarrtree::value_t> from_result_s;
     water_rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
@@ -203,7 +203,7 @@ std::vector<xy32> ss::sea_static::calculate_waypoints(const xy32 & from, const x
     }
 }
 
-std::vector<xy32> ss::sea_static::calculate_waypoints(const sea_static_object_public::point_t & from, const sea_static_object_public::point_t & to) const {
+std::vector<xy32> sea_static::calculate_waypoints(const sea_static_object_public::point_t & from, const sea_static_object_public::point_t & to) const {
     xy32 fromxy;
     xy32 toxy;
     fromxy.x = from.get<0>();
@@ -213,12 +213,12 @@ std::vector<xy32> ss::sea_static::calculate_waypoints(const sea_static_object_pu
     return calculate_waypoints(fromxy, toxy);
 }
 
-bool ss::sea_static::is_water(const xy32& cell) const {
+bool sea_static::is_water(const xy32& cell) const {
     auto cell_box = astarrtree::box_t_from_xy(cell);
     return water_rtree_ptr->qbegin(bgi::contains(cell_box)) != water_rtree_ptr->qend();
 }
 
-bool ss::sea_static::is_sea_water(const xy32& cell) const {
+bool sea_static::is_sea_water(const xy32& cell) const {
     auto cell_box = astarrtree::box_t_from_xy(cell);
     auto it = water_rtree_ptr->qbegin(bgi::contains(cell_box));
     if (it != water_rtree_ptr->qend()) {
