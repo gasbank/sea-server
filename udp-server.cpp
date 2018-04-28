@@ -522,11 +522,18 @@ std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& 
 std::shared_ptr<const route> udp_server::find_route_map_by_ship_id(int ship_id) const {
     auto obj = sea_->get_object_by_type(ship_id);
     if (!obj) {
-        LOGE("Sea object %1% not found.", ship_id);
-    }
-    auto it = route_map_.find(obj->get_id());
-    if (it != route_map_.end()) {
-        return it->second;
+        LOGE("%1%: Sea object %2% not found.",
+             __func__,
+             ship_id);
+    } else {
+        auto it = route_map_.find(obj->get_id());
+        if (it != route_map_.end()) {
+            return it->second;
+        } else {
+            LOGE("%1%: Sea object %2% has no route info.",
+                 __func__,
+                 ship_id);
+        }
     }
     return std::shared_ptr<const route>();
 }
