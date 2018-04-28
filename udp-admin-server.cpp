@@ -114,6 +114,14 @@ struct delete_ship_command {
     int ship_id;
 };
 
+struct spawn_port_command {
+    command _;
+    int id;
+    char name[64];
+    int xc;
+    int yc;
+};
+
 void udp_admin_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
         command* cp = reinterpret_cast<command*>(recv_buffer_.data());
@@ -196,6 +204,31 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             LOGI("Delete Ship type: %1%", static_cast<int>(cp->type));
             const delete_ship_command* spawn = reinterpret_cast<delete_ship_command*>(recv_buffer_.data());;
             sea_->despawn(spawn->ship_id);
+            break;
+        }
+        case 6: // Spawn Port
+        {
+            assert(bytes_transferred == sizeof(spawn_port_command));
+            LOGI("Spawn Port type: %1%", static_cast<int>(cp->type));
+            const spawn_port_command* spawn = reinterpret_cast<spawn_port_command*>(recv_buffer_.data());;
+            xy32 spawn_pos = { spawn->xc, spawn->yc };
+            if (sea_static_->is_water(spawn_pos)) {
+                int id = seaport_->spawn(spawn->name, spawn->xc, spawn->yc);
+                bool new_spawn = false;
+                if (id >= 0) {
+                    LOGI("New port spawned. (x=%1%, y=%2%)",
+                         spawn_pos.x,
+                         spawn_pos.y);
+                } else {
+                    LOGE("New port cannot be spawned at (x=%1%, y=%2%)",
+                         spawn_pos.x,
+                         spawn_pos.y);
+                }
+            } else {
+                LOGE("Spawn position should be water. (x=%1%, y=%2%)",
+                     spawn_pos.x,
+                     spawn_pos.y);
+            }
             break;
         }
         default:

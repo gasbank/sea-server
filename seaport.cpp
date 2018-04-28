@@ -66,7 +66,11 @@ seaport::seaport()
     for (int i = 0; i < count; i++) {
         id_name[i] = sp[i].name;
         name_id[sp[i].name] = i;
-        id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+        //id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+    }
+    const auto bounds = rtree_ptr->bounds();
+    for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
+        id_point[it->second] = it->first;
     }
 
     // TESTING-----------------
@@ -136,4 +140,19 @@ int seaport::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int&
         }
     }
     return 0;
+}
+
+int seaport::spawn(const char* name, int xc, int yc) {
+    seaport_object_public::point_t new_port_point{ xc, yc };
+    if (rtree_ptr->qbegin(bgi::intersects(new_port_point)) != rtree_ptr->qend()) {
+        // already exists
+        return -1;
+    }
+
+    const auto id = static_cast<int>(rtree_ptr->size());
+    rtree_ptr->insert(std::make_pair(new_port_point, id));
+    id_name[id] = name;
+    name_id[name] = id;
+    id_point[id] = new_port_point;
+    return id;
 }
