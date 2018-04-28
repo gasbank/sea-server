@@ -467,8 +467,10 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             send_waypoints(p->ship_id);
             LOGIx("REQUESTWAYPOINTS replied with WAYPOINTS.");
         }
-        start_receive();
+    } else {
+        LOGE("%1%: error %2%, bytes_transferred %3%", __func__, error, bytes_transferred);
     }
+    start_receive();
 }
 
 std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seaport_id_list) const {
