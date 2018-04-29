@@ -100,6 +100,7 @@ struct spawn_ship_command {
     float y;
     int port1_id;
     int port2_id;
+    int new_spawn;
 };
 
 struct spawn_ship_command_reply {
@@ -116,10 +117,16 @@ struct delete_ship_command {
 
 struct spawn_port_command {
     command _;
-    int id;
+    int id; // DB key
     char name[64];
     int xc;
     int yc;
+};
+
+struct spawn_port_command_reply {
+    command _;
+    int id; // DB key
+    int port_id; // Sea-server key
 };
 
 void udp_admin_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
@@ -180,7 +187,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                     reply.ship_id = spawn->id;
                     reply.port1_id = id1;
                     reply.port2_id = id2;
-                    if (new_spawn) {
+                    if (new_spawn || spawn->new_spawn) {
                         socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_ship_command_reply)), remote_endpoint_,
                                               boost::bind(&udp_admin_server::handle_send, this,
                                                           boost::asio::placeholders::error,
@@ -214,11 +221,20 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             xy32 spawn_pos = { spawn->xc, spawn->yc };
             if (sea_static_->is_water(spawn_pos)) {
                 int id = seaport_->spawn(spawn->name, spawn->xc, spawn->yc);
-                bool new_spawn = false;
                 if (id >= 0) {
                     LOGI("New port spawned. (x=%1%, y=%2%)",
                          spawn_pos.x,
                          spawn_pos.y);
+
+                    spawn_port_command_reply reply;
+                    memset(&reply, 0, sizeof(spawn_port_command_reply));
+                    reply._.type = 4;
+                    reply.id = spawn->id;
+                    reply.port_id = id;
+                    socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_port_command_reply)), remote_endpoint_,
+                                            boost::bind(&udp_admin_server::handle_send, this,
+                                                        boost::asio::placeholders::error,
+                                                        boost::asio::placeholders::bytes_transferred));
                 } else {
                     LOGE("New port cannot be spawned at (x=%1%, y=%2%)",
                          spawn_pos.x,
