@@ -1,6 +1,7 @@
 #include "precompiled.hpp"
 #include "astarrtree.hpp"
 #include "AStar.h"
+#include "CohenSutherland.h"
 
 using namespace astarrtree;
 using ss::LOGI;
@@ -11,7 +12,8 @@ using ss::LOGEx;
 struct PathfindContext {
     xy32xy32 from_rect;
     xy32xy32 to_rect;
-    rtree_t* rtree;
+    rtree_t* rtree_water;
+    rtree_t* rtree_land;
 };
 
 xy32xy32 xyxy_from_box_t(const box_t& v) {
@@ -34,10 +36,10 @@ box_t box_t_from_xyxy(const xy32xy32& v) {
 
 void RTreePathNodeNeighbors(ASNeighborList neighbors, void *node, void *context) {
     auto n = reinterpret_cast<const xy32xy32xy32*>(node);
-    rtree_t* rtree_ptr = reinterpret_cast<PathfindContext*>(context)->rtree;
+    rtree_t* rtree_water_ptr = reinterpret_cast<PathfindContext*>(context)->rtree_water;
     box_t query_box = box_t_from_xyxy(n->box);
     std::vector<value_t> result_s;
-    rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
+    rtree_water_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     for (const auto& v : result_s) {
         auto xyxy = xyxy_from_box_t(v.first);
         const xy32 enter_point{
@@ -75,6 +77,112 @@ int RectDistance(const xy32xy32* a, const xy32xy32* b) {
     return dx + dy;
 }
 
+// https://www.sanfoundry.com/cpp-program-implement-gift-wrapping-algorithm-two-dimensions/
+
+// To find orientation of ordered triplet (p, q, r).
+// The function returns following values
+// 0 --> p, q and r are colinear
+// 1 --> Clockwise
+// 2 --> Counterclockwise
+int orientation(ixy32 p, ixy32 q, ixy32 r) {
+    int val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+
+    if (val == 0)
+        return 0; // colinear
+    return (val > 0) ? 1 : 2; // clock or counterclock wise
+}
+
+// Prints convex hull of a set of n points.
+void convexHull(ixy32 points[], size_t n, float& shortest_len) {
+    LOGI("Convex Hull calculation with %1% points...", n);
+    // There must be at least 3 points
+    if (n < 3) {
+        return;
+    }
+        
+
+    // Initialize Result
+    int* next = reinterpret_cast<int*>(alloca(sizeof(int) * n));
+    for (int i = 0; i < n; i++) {
+        next[i] = -1;
+    }
+        
+
+    // Find the leftmost point
+    int l = 0;
+    for (int i = 1; i < n; i++) {
+        if (points[i].x < points[l].x) {
+            l = i;
+        }   
+    }
+        
+
+    // Start from leftmost point, keep moving counterclockwise
+    // until reach the start point again
+    int p = l, q;
+    do {
+        q = (p + 1) % n;
+        // Search for a point 'q' such that orientation(p, i, q) is
+        // counterclockwise for all points 'i'
+        for (int i = 0; i < n; i++) {
+            if (orientation(points[p], points[i], points[q]) == 2) {
+                q = i;
+                //i = -1;
+            }
+        }
+
+        next[p] = q; // Add q to result as a next point of p
+        p = q; // Set p as q for next iteration
+    } while (p != l);
+
+    // Print Result
+    
+    p = l;
+    bool from = false;
+    bool to = false;
+    float total_circum = 0;
+    bool from_to_segment = false;
+    float segment_circum = 0;
+    do {
+        if (points[p].i == 0) {
+            from = true;
+            from_to_segment = !from_to_segment;
+        }
+        if (points[p].i == 2) {
+            to = true;
+            from_to_segment = !from_to_segment;
+        }
+        LOGIx("POINT %1%,%2% [INDEX=%3%]", points[p].x, points[p].y, points[p].i);
+
+        const auto dx = static_cast<float>(points[next[p]].x - points[p].x);
+        const auto dy = static_cast<float>(points[next[p]].y - points[p].y);
+        const auto dlen = sqrtf(dx * dx + dy * dy);
+        total_circum += dlen;
+        if (std::isnan(total_circum)) {
+            int x = 1000;
+        }
+        if (from_to_segment) {
+            segment_circum += dlen;
+        }
+
+        p = next[p];
+    } while (p != l);
+
+    if (from && to) {
+        shortest_len = std::min(segment_circum, total_circum - segment_circum);
+        LOGI("GOOD! Total Circum %1%, Segment Circum %2%, Shortest %3%", total_circum, segment_circum, shortest_len);
+    } else {
+        shortest_len = total_circum;
+    }
+}
+
+typedef std::pair<point_t, int> point_value_t;
+const float pi = boost::math::constants::pi<float>();
+
+bool check_not_duplicate(const xy32& from, const xy32& to, const ixy32& p) {
+    return (from.x != p.x || from.y != p.y) && (to.x != p.x || to.y != p.y);
+}
+
 float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
     const auto from = reinterpret_cast<const xy32xy32xy32*>(fromNode);
     const auto to = reinterpret_cast<const xy32xy32xy32*>(toNode);
@@ -90,8 +198,9 @@ float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
 
     // [2] Global Direction Following Method
     // Less cost if moving to the same direction... (kind of greedy)
-    const auto global_from_rect = &reinterpret_cast<PathfindContext*>(context)->from_rect;
-    const auto global_to_rect = &reinterpret_cast<PathfindContext*>(context)->to_rect;
+    const auto pathfind_context = reinterpret_cast<PathfindContext*>(context);
+    const auto global_from_rect = &pathfind_context->from_rect;
+    const auto global_to_rect = &pathfind_context->to_rect;
 
     const auto dir_rect = atan2f(static_cast<float>(global_to_rect->xy0.y - global_from_rect->xy0.y),
                                  static_cast<float>(global_to_rect->xy0.x - global_from_rect->xy0.x));
@@ -118,9 +227,113 @@ float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
     const auto enter_point_dx = from->point.x - to->point.x;
     const auto enter_point_dy = from->point.y - to->point.y;
     const auto enter_point_dist = sqrtf(static_cast<float>(enter_point_dx * enter_point_dx + enter_point_dy * enter_point_dy));
+    float path_cost = 0;
+
+    //if (from_to_cost == 0) {
+    //    path_cost = enter_point_dist;
+    //} else {
+    //    // not neighbor
+    //    // finding shortest path cost (distance) between 'from->point' and 'to->point'
+    //    // with a rectangular obstacle exists on the straight path.
+    //    int obstacle_min_corner_x = INT_MAX;
+    //    int obstacle_min_corner_y = INT_MAX;
+    //    int obstacle_max_corner_x = INT_MIN;
+    //    int obstacle_max_corner_y = INT_MIN;
+
+    //    bool seg_valid = false;
+    //    bgm::segment<point_t> segment_between_points{ { from->point.x, from->point.y },{ to->point.x, to->point.y } };
+    //    point_t from_point(from->point.x, from->point.y);
+    //    point_t to_point(to->point.x, to->point.y);
+    //    //bool seg_contained = false;
+
+    //    std::vector<ixy32> A{
+    //        { 0, from->point.x, from->point.y },
+    //        { 2, to->point.x, to->point.y },
+    //    };
+    //    assert(from->point.x != to->point.x || from->point.y != to->point.y);
+
+    //    for (auto seg_it = pathfind_context->rtree_land->qbegin(bgi::intersects(segment_between_points)); seg_it != pathfind_context->rtree_land->qend(); seg_it++) {
+    //        if (boost::geometry::within(from_point, seg_it->first) || boost::geometry::within(to_point, seg_it->first)) {
+    //            continue;
+    //        }
+    //        if (obstacle_min_corner_x > seg_it->first.min_corner().get<0>()) {
+    //            obstacle_min_corner_x = seg_it->first.min_corner().get<0>();
+    //        }
+    //        if (obstacle_min_corner_y > seg_it->first.min_corner().get<1>()) {
+    //            obstacle_min_corner_y = seg_it->first.min_corner().get<1>();
+    //        }
+    //        if (obstacle_max_corner_x < seg_it->first.max_corner().get<0>()) {
+    //            obstacle_max_corner_x = seg_it->first.max_corner().get<0>();
+    //        }
+    //        if (obstacle_max_corner_y < seg_it->first.max_corner().get<1>()) {
+    //            obstacle_max_corner_y = seg_it->first.max_corner().get<1>();
+    //        }
+    //        box_t obstacle{ { obstacle_min_corner_x, obstacle_min_corner_y },{ obstacle_max_corner_x ,obstacle_max_corner_y } };
+    //        if (boost::geometry::within(from_point, obstacle)) {
+    //            LOGEx("%1%: from point included in obstacle! from point: %2% %3% / obs: %4% %5% %6% %7%",
+    //                  __func__,
+    //                  from_point.get<0>(),
+    //                  from_point.get<1>(),
+    //                  obstacle.min_corner().get<0>(),
+    //                  obstacle.min_corner().get<1>(),
+    //                  obstacle.max_corner().get<0>(),
+    //                  obstacle.max_corner().get<1>());
+    //            //abort();
+    //            //seg_contained = true;
+    //        }
+    //        if (boost::geometry::within(to_point, obstacle)) {
+    //            LOGEx("%1%: to point included in obstacle! from point: %2% %3% / obs: %4% %5% %6% %7%",
+    //                  __func__,
+    //                  to_point.get<0>(),
+    //                  to_point.get<1>(),
+    //                  obstacle.min_corner().get<0>(),
+    //                  obstacle.min_corner().get<1>(),
+    //                  obstacle.max_corner().get<0>(),
+    //                  obstacle.max_corner().get<1>());
+    //            //abort();
+    //            //seg_contained = true;
+    //        }
+    //        ixy32 p0{ 1, seg_it->first.min_corner().get<0>(), seg_it->first.min_corner().get<1>() };
+    //        ixy32 p1{ 1, seg_it->first.min_corner().get<0>(), seg_it->first.max_corner().get<1>() };
+    //        ixy32 p2{ 1, seg_it->first.max_corner().get<0>(), seg_it->first.min_corner().get<1>() };
+    //        ixy32 p3{ 1, seg_it->first.max_corner().get<0>(), seg_it->first.max_corner().get<1>() };
+
+    //        if ((from->point.x == to->point.x) && (from->point.x == seg_it->first.min_corner().get<0>() || from->point.x == seg_it->first.max_corner().get<0>())) {
+    //            // COLINEAR ON Y-AXIS
+    //        } else if ((from->point.y == to->point.y) && (from->point.y == seg_it->first.min_corner().get<1>() || from->point.y == seg_it->first.max_corner().get<1>())) {
+    //            // COLINEAR ON X-AXIS
+    //        } else {
+    //            if (check_not_duplicate(from->point, to->point, p0)) {
+    //                A.push_back(p0);
+    //            }
+    //            if (check_not_duplicate(from->point, to->point, p1)) {
+    //                A.push_back(p1);
+    //            }
+    //            if (check_not_duplicate(from->point, to->point, p2)) {
+    //                A.push_back(p2);
+    //            }
+    //            if (check_not_duplicate(from->point, to->point, p3)) {
+    //                A.push_back(p3);
+    //            }
+    //            seg_valid = true;
+    //            LOGI("Convex Hull node size %1%...", A.size());
+    //        }
+    //    }
+
+    //    if (seg_valid) {
+    //        convexHull(&A[0], A.size(), path_cost);
+    //    } else {
+    //        // yey! no obstacle!
+    //        path_cost = enter_point_dist;
+    //    }
+    //}
+
     // 'from_to_cast' is a pentalty cost.
     // It is non-zero only if 'fromNode' and 'toNode' are not neighbors.
     return enter_point_dist + from_to_cost;
+    //return path_cost;
+
+
 
     // [7] No cost
     //return 0;
@@ -557,11 +770,21 @@ std::vector<xy32> calculate_pixel_waypoints(xy32 from, xy32 to, ASPath cell_path
     return waypoints;
 }
 
-void astarrtree::astar_rtree(const char* rtree_filename, size_t output_max_size, xy32 from, xy32 to) {
-    bi::managed_mapped_file file(bi::open_or_create, rtree_filename, output_max_size);
-    allocator_t alloc(file.get_segment_manager());
-    rtree_t* rtree_ptr = file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), alloc);
-    astar_rtree_memory(rtree_ptr, from, to);
+void astarrtree::astar_rtree(const char* water_rtree_filename,
+                             size_t water_output_max_size,
+                             const char* land_rtree_filename,
+                             size_t land_output_max_size,
+                             xy32 from,
+                             xy32 to) {
+    bi::managed_mapped_file water_file(bi::open_or_create, water_rtree_filename, water_output_max_size);
+    allocator_t water_alloc(water_file.get_segment_manager());
+    rtree_t* rtree_water_ptr = water_file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), water_alloc);
+
+    bi::managed_mapped_file land_file(bi::open_or_create, land_rtree_filename, land_output_max_size);
+    allocator_t land_alloc(land_file.get_segment_manager());
+    rtree_t* rtree_land_ptr = land_file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), land_alloc);
+
+    astar_rtree_memory(rtree_water_ptr, rtree_land_ptr, from, to);
 }
 
 bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box_t& from_box, std::vector<value_t>& from_result_s) {
@@ -626,7 +849,7 @@ bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box
     }
 }
 
-std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, xy32 to) {
+std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_water_ptr, rtree_t* rtree_land_ptr, xy32 from, xy32 to) {
     float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
     ss::LOGI("Pathfinding from (%1%,%2%) -> (%3%,%4%) [Manhattan distance = %5%]",
              from.x,
@@ -636,15 +859,17 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
              distance);
 
     std::vector<xy32> waypoints;
-    ss::LOGI("R Tree size: %1%", rtree_ptr->size());
-    if (rtree_ptr->size() == 0) {
+    ss::LOGI("R Tree water size: %1%", rtree_water_ptr->size());
+    if (rtree_water_ptr->size() == 0) {
         return waypoints;
     }
 
+    ss::LOGI("R Tree land size: %1%", rtree_land_ptr->size());
+
     auto from_box = box_t_from_xy(from);
     std::vector<value_t> from_result_s;
-    rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
-    if (astarrtree::find_nearest_point_if_empty(rtree_ptr, from, from_box, from_result_s)) {
+    rtree_water_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
+    if (astarrtree::find_nearest_point_if_empty(rtree_water_ptr, from, from_box, from_result_s)) {
         ss::LOGI("  'From' point changed to (%1%,%2%)",
                  from.x,
                  from.y);
@@ -652,8 +877,8 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
 
     auto to_box = box_t_from_xy(to);
     std::vector<value_t> to_result_s;
-    rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
-    if (astarrtree::find_nearest_point_if_empty(rtree_ptr, to, to_box, to_result_s)) {
+    rtree_water_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
+    if (astarrtree::find_nearest_point_if_empty(rtree_water_ptr, to, to_box, to_result_s)) {
         ss::LOGI("  'To' point changed to (%1%,%2%)",
                  to.x,
                  to.y);
@@ -674,7 +899,8 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_ptr, xy32 from, 
         PathfindContext context{
             { { from.x,from.y },{ from.x + 1, from.y + 1 } },
             { { to.x,to.y },{ to.x + 1, to.y + 1 } },
-            rtree_ptr
+            rtree_water_ptr,
+            rtree_land_ptr,
         };
         ASPath path = ASPathCreate(&PathNodeSource, &context, &from_rect, &to_rect);
         size_t pathCount = ASPathGetCount(path);

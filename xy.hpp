@@ -10,6 +10,18 @@ struct xy32 {
     int y;
 };
 
+struct ifxy32 {
+    int i;
+    float x;
+    float y;
+};
+
+struct ixy32 {
+    int i;
+    int x;
+    int y;
+};
+
 inline bool operator < (const xy32& lhs, const xy32& rhs) {
     if (lhs.x == rhs.x) {
         return lhs.y < rhs.y;

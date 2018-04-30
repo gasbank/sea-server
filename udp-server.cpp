@@ -368,7 +368,7 @@ void udp_server::send_waypoints(int ship_id) {
         reply->waypoints[i].y = waypoints[i].y;
     }
     // send
-    char compressed[1500];
+    char compressed[1500*4];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLWAYPOINTS), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),

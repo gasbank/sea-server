@@ -209,7 +209,7 @@ std::vector<xy32> sea_static::calculate_waypoints(const xy32 & from, const xy32 
     }
 
     if (new_from_sea_water && new_to_sea_water) {
-        return astarrtree::astar_rtree_memory(water_rtree_ptr, new_from, new_to);
+        return astarrtree::astar_rtree_memory(water_rtree_ptr, land_rtree_ptr, new_from, new_to);
     } else {
         LOGE("ERROR: Both 'From' and 'To' should be in sea water to generate waypoints!");
         return std::vector<xy32>();
