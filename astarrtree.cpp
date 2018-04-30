@@ -849,6 +849,16 @@ bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box
     }
 }
 
+static int RTreePathNodeEarlyExit(size_t visitedCount, void *visitingNode, void *goalNode, void *context) {
+    if (visitedCount >= 1000) {
+        LOGI("%1%: Too many visit! (%2% visits) Pathfinding aborted.",
+             __func__,
+             visitedCount);
+        return -1;
+    }
+    return 0;
+}
+
 std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_water_ptr, rtree_t* rtree_land_ptr, xy32 from, xy32 to) {
     float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
     ss::LOGI("Pathfinding from (%1%,%2%) -> (%3%,%4%) [Manhattan distance = %5%]",
@@ -891,7 +901,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_water_ptr, rtree
             sizeof(xy32xy32xy32),
             RTreePathNodeNeighbors,
             RTreePathNodeHeuristic,
-            NULL,
+            RTreePathNodeEarlyExit,
             RTreePathNodeComparator
         };
         xy32xy32xy32 from_rect = { xyxy_from_box_t(from_result_s[0].first), from };
