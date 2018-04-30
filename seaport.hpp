@@ -16,6 +16,7 @@ namespace ss {
         int lng_to_xc(float lng) const;
         int lat_to_yc(float lat) const;
         int spawn(const char* name, int xc, int yc);
+        void set_name(int id, const char* name);
     private:
         std::vector<seaport_object_public> query_near_to_packet(int xc, int yc, int halfex) const; 
         std::vector<seaport_object_public::value_t> query_tree(int xc, int yc, int halfex) const;

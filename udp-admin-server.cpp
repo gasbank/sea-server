@@ -129,6 +129,12 @@ struct spawn_port_command_reply {
     int port_id; // Sea-server key
 };
 
+struct name_port_command {
+    command _;
+    int port_id;
+    char name[64];
+};
+
 void udp_admin_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
         command* cp = reinterpret_cast<command*>(recv_buffer_.data());
@@ -245,6 +251,14 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                      spawn_pos.x,
                      spawn_pos.y);
             }
+            break;
+        }
+        case 7: // Name Port
+        {
+            assert(bytes_transferred == sizeof(name_port_command));
+            LOGI("Name Port type: %1%", static_cast<int>(cp->type));
+            const name_port_command* name_port = reinterpret_cast<name_port_command*>(recv_buffer_.data());;
+            seaport_->set_name(name_port->port_id, name_port->name);
             break;
         }
         default:

@@ -151,8 +151,25 @@ int seaport::spawn(const char* name, int xc, int yc) {
 
     const auto id = static_cast<int>(rtree_ptr->size());
     rtree_ptr->insert(std::make_pair(new_port_point, id));
-    id_name[id] = name;
-    name_id[name] = id;
     id_point[id] = new_port_point;
+    if (name[0] != 0) {
+        set_name(id, name);
+    } else {
+        LOGE("%1%: seaport spawned, but name empty. (seaport id = %2%)",
+             __func__,
+             id);
+    }
     return id;
+}
+
+void seaport::set_name(int id, const char* name) {
+    if (id_point.find(id) != id_point.end()) {
+        id_name[id] = name;
+        name_id[name] = id;
+    } else {
+        LOGE("%1%: cannot find seaport id %2%. seaport set name to '%3%' failed.",
+             __func__,
+             id,
+             name);
+    }
 }
