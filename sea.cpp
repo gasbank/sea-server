@@ -32,7 +32,7 @@ void sea::populate_test() {
     //travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
     LOGI("Spawning finished.");
     std::vector<sea_object_public> sop_list;
-    query_near_to_packet(0, 0, 10, sop_list);
+    query_near_to_packet(0, 0, 10, 10, sop_list);
 }
 
 int sea::spawn(const char* guid, int type, float x, float y, float w, float h) {
@@ -183,12 +183,12 @@ void sea::teleport_by(const char* guid, float dx, float dy) {
     }
 }
 
-void sea::query_near_lng_lat_to_packet(float lng, float lat, float ex, std::vector<sea_object_public>& sop_list) const {
-    query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), ex, sop_list);
+void sea::query_near_lng_lat_to_packet(float lng, float lat, float ex_lng, float ex_lat, std::vector<sea_object_public>& sop_list) const {
+    query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), ex_lng, ex_lat, sop_list);
 }
 
-void sea::query_near_to_packet(float xc, float yc, float ex, std::vector<sea_object_public>& sop_list) const {
-    auto id_list = query_tree(xc, yc, ex);
+void sea::query_near_to_packet(float xc, float yc, float ex_lng, float ex_lat, std::vector<sea_object_public>& sop_list) const {
+    auto id_list = query_tree(xc, yc, ex_lng, ex_lat);
     sop_list.resize(id_list.size());
     std::size_t i = 0;
     for (int id : id_list) {
@@ -200,8 +200,8 @@ void sea::query_near_to_packet(float xc, float yc, float ex, std::vector<sea_obj
     }
 }
 
-std::vector<int> sea::query_tree(float xc, float yc, float ex) const {
-    box query_box(point(xc - ex / 2, yc - ex / 2), point(xc + ex / 2, yc + ex / 2));
+std::vector<int> sea::query_tree(float xc, float yc, float ex_lng, float ex_lat) const {
+    box query_box(point(xc - ex_lng / 2, yc - ex_lat / 2), point(xc + ex_lng / 2, yc + ex_lat / 2));
     std::vector<value> result_s;
     std::vector<int> id_list;
     rtree.query(bgi::intersects(query_box), std::back_inserter(result_s));

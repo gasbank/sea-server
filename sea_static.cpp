@@ -25,12 +25,13 @@ int sea_static::lat_to_yc(float lat) const {
 }
 
 std::vector<sea_static_object_public> sea_static::query_near_lng_lat_to_packet(float lng, float lat, float ex) const {
-    return query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), ex);
+    return query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), ex, ex);
 }
 
-std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc, int yc, float ex) const {
-    const auto halfex = boost::math::iround(ex / 2);
-    auto values = query_tree(xc, yc, halfex);
+std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const {
+    const auto half_lng_ex = boost::math::iround(ex_lng / 2);
+    const auto half_lat_ex = boost::math::iround(ex_lat / 2);
+    auto values = query_tree_ex(xc, yc, half_lng_ex, half_lat_ex);
     std::vector<sea_static_object_public> sop_list;
     for (std::size_t i = 0; i < values.size(); i++) {
         sop_list.emplace_back(sea_static_object_public(values[i]));
@@ -47,8 +48,8 @@ std::vector<sea_static_object_public> sea_static::query_near_to_packet(int xc0, 
     return sop_list;
 }
 
-std::vector<sea_static_object_public::value_t> sea_static::query_tree(int xc, int yc, int halfex) const {
-    return query_tree(xc - halfex, yc - halfex, xc + halfex, yc + halfex);
+std::vector<sea_static_object_public::value_t> sea_static::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
+    return query_tree(xc - half_lng_ex, yc - half_lat_ex, xc + half_lng_ex, yc + half_lat_ex);
 }
 
 std::vector<sea_static_object_public::value_t> sea_static::query_tree(int xc0, int yc0, int xc1, int yc1) const {
