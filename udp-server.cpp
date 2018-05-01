@@ -433,6 +433,13 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             auto p = reinterpret_cast<LWPTTLREQUESTWAYPOINTS*>(recv_buffer_.data());
             send_waypoints(p->ship_id);
             LOGIx("REQUESTWAYPOINTS replied with WAYPOINTS.");
+        } else if (type == 118) {
+            // LPGP_LWPTTLPINGFLUSH
+            LOGI("PINGFLUSH received.");
+        } else {
+            LOGI("%1%: Unknown UDP request of type %2%",
+                 __func__,
+                 static_cast<int>(type));
         }
     } else {
         LOGE("%1%: error %2%, bytes_transferred %3%", __func__, error, bytes_transferred);
