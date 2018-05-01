@@ -196,13 +196,34 @@ int msb_index(unsigned int v) {
 }
 #endif
 
+static int aligned_chunk_index(const int cell_index, const int view_scale, const float ex) {
+    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f * view_scale);
+    return (cell_index + half_cell_pixel_extent) & ~(2 * half_cell_pixel_extent - 1) & ~(view_scale - 1);
+}
+
+static signed char aligned_scaled_offset(const int cell_index, const int aligned_cell_index, const int view_scale, const int view_scale_msb_index, const bool clamp, int lo, int hi) {
+    const auto cell_index_scaled = cell_index & ~(view_scale - 1);
+    const auto offset = cell_index_scaled - aligned_cell_index;
+    try {
+        return boost::numeric_cast<signed char>((clamp ? boost::algorithm::clamp(offset, lo, hi) : offset) >> view_scale_msb_index);
+    } catch (const boost::numeric::negative_overflow& o) {
+        LOGE(o.what());
+    }
+    return 0;
+}
+
 void udp_server::send_static_state2(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
+    const auto xc0 = sea_static_->lng_to_xc(lng);
+    const auto yc0 = sea_static_->lat_to_yc(lat);
     const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
     const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
-    const auto xc0 = (sea_static_->lng_to_xc(lng) + half_lng_cell_pixel_extent) & ~(2 * half_lng_cell_pixel_extent - 1) & ~(view_scale - 1);
-    const auto yc0 = (sea_static_->lat_to_yc(lat) + half_lat_cell_pixel_extent) & ~(2 * half_lat_cell_pixel_extent - 1) & ~(view_scale - 1);
-    auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, ex_lng * view_scale, ex_lat * view_scale);
-    //auto sop_list = sea_static_->query_near_to_packet(xc0, yc0, xc1, yc1);
+    const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, ex_lng);
+    const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, ex_lat);
+    auto sop_list = sea_static_->query_near_to_packet(xc0_aligned,
+                                                      yc0_aligned,
+                                                      ex_lng * view_scale,
+                                                      ex_lat * view_scale);
+    //auto sop_list = sea_static_->query_near_to_packet(xc0_aligned, yc0_aligned, xc1, yc1);
 
 
     const auto xclo = -half_lng_cell_pixel_extent;
@@ -212,26 +233,28 @@ void udp_server::send_static_state2(float lng, float lat, float ex_lng, float ex
     boost::shared_ptr<LWPTTLSTATICSTATE2> reply(new LWPTTLSTATICSTATE2);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE2));
     reply->type = 115; // LPGP_LWPTTLSTATICSTATE2
-    reply->xc0 = xc0;
-    reply->yc0 = yc0;
+    reply->xc0 = xc0_aligned;
+    reply->yc0 = yc0_aligned;
     reply->view_scale = view_scale;
     size_t reply_obj_index = 0;
     size_t reply_obj_dropped_count = 0;
-    int view_scale_msb_index = msb_index(view_scale);
+    const int view_scale_msb_index = msb_index(view_scale);
     for (const auto& v : sop_list) {
-        const auto vx0 = v.x0 &~(view_scale - 1);
-        const auto vy0 = v.y0 &~(view_scale - 1);
-        const auto vx1 = v.x1 &~(view_scale - 1);
-        const auto vy1 = v.y1 &~(view_scale - 1);
-
-        const auto x_scaled_offset_0 = boost::numeric_cast<char>(boost::algorithm::clamp(vx0 - xc0, xclo, xchi) >> view_scale_msb_index);
-        const auto x_scaled_offset_1 = boost::numeric_cast<char>(boost::algorithm::clamp(vx1 - xc0, xclo, xchi) >> view_scale_msb_index);
+        // x-axis
+        
+        //const auto vx0 = v.x0 &~(view_scale - 1);
+        //const auto vx1 = v.x1 &~(view_scale - 1);
+        const auto x_scaled_offset_0 = aligned_scaled_offset(v.x0, xc0_aligned, view_scale, view_scale_msb_index, true, xclo, xchi);// boost::numeric_cast<signed char>(boost::algorithm::clamp(vx0 - xc0_aligned, xclo, xchi) >> view_scale_msb_index);
+        const auto x_scaled_offset_1 = aligned_scaled_offset(v.x1, xc0_aligned, view_scale, view_scale_msb_index, true, xclo, xchi);// boost::numeric_cast<signed char>(boost::algorithm::clamp(vx1 - xc0_aligned, xclo, xchi) >> view_scale_msb_index);
         // skip degenerated one
         if (x_scaled_offset_0 >= x_scaled_offset_1) {
             continue;
         }
-        const auto y_scaled_offset_0 = boost::numeric_cast<char>(boost::algorithm::clamp(vy0 - yc0, yclo, ychi) >> view_scale_msb_index);
-        const auto y_scaled_offset_1 = boost::numeric_cast<char>(boost::algorithm::clamp(vy1 - yc0, yclo, ychi) >> view_scale_msb_index);
+        // y-axis
+        //const auto vy0 = v.y0 &~(view_scale - 1);
+        //const auto vy1 = v.y1 &~(view_scale - 1);
+        const auto y_scaled_offset_0 = aligned_scaled_offset(v.y0, yc0_aligned, view_scale, view_scale_msb_index, true, yclo, ychi); //boost::numeric_cast<signed char>(boost::algorithm::clamp(vy0 - yc0_aligned, yclo, ychi) >> view_scale_msb_index);
+        const auto y_scaled_offset_1 = aligned_scaled_offset(v.y1, yc0_aligned, view_scale, view_scale_msb_index, true, yclo, ychi); //boost::numeric_cast<signed char>(boost::algorithm::clamp(vy1 - yc0_aligned, yclo, ychi) >> view_scale_msb_index);
         // skip degenerated one
         if (y_scaled_offset_0 >= y_scaled_offset_1) {
             continue;
@@ -332,7 +355,7 @@ void udp_server::send_waypoints(int ship_id) {
         reply->waypoints[i].y = waypoints[i].y;
     }
     // send
-    char compressed[1500*4];
+    char compressed[1500 * 4];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLWAYPOINTS), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
@@ -349,19 +372,29 @@ void udp_server::send_waypoints(int ship_id) {
 }
 
 void udp_server::send_seaport(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
-    auto sop_list = seaport_->query_near_lng_lat_to_packet(lng,
-                                                           lat,
-                                                           static_cast<int>(ex_lng / 2) * view_scale,
-                                                           static_cast<int>(ex_lat / 2) * view_scale);
+    const auto xc0 = sea_static_->lng_to_xc(lng);
+    const auto yc0 = sea_static_->lat_to_yc(lat);
+    const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
+    const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
+    const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, ex_lng);
+    const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, ex_lat);
+    auto sop_list = seaport_->query_near_to_packet(xc0_aligned,
+                                                   yc0_aligned,
+                                                   ex_lng * view_scale,
+                                                   ex_lat * view_scale);
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
+    reply->xc0 = xc0_aligned;
+    reply->yc0 = yc0_aligned;
+    reply->view_scale = view_scale;
     size_t reply_obj_index = 0;
+    const int view_scale_msb_index = msb_index(view_scale);
     for (seaport_object_public const& v : sop_list) {
-        reply->obj[reply_obj_index].x0 = v.x0;
-        reply->obj[reply_obj_index].y0 = v.y0;
+        reply->obj[reply_obj_index].x_scaled_offset_0 = aligned_scaled_offset(v.x0, xc0_aligned, view_scale, view_scale_msb_index, false, 0, 0);
+        reply->obj[reply_obj_index].y_scaled_offset_0 = aligned_scaled_offset(v.y0, yc0_aligned, view_scale, view_scale_msb_index, false, 0, 0);
         if (view_scale < 16) {
-            strcpy(reply->obj[reply_obj_index].name, seaport_->get_seaport_name(v.id));
+            //strcpy(reply->obj[reply_obj_index].name, seaport_->get_seaport_name(v.id));
         }
         reply_obj_index++;
         if (reply_obj_index >= boost::size(reply->obj)) {
@@ -416,17 +449,18 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
             send_full_state(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // ships (vessels)
             if (p->static_object) {
-                send_static_state2(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // land cells
-            } else {
-                if (p->ping_seq % 32 == 0) {
+                if (p->ex_lng != p->ex_lat) {
+                    LOGE("Extents along both axis should be the same when requesting statics! No reply will be made.");
+                } else {
+                    send_static_state2(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // land cells
                     send_seaport(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // seaports
-                    send_seaarea(p->lng, p->lat); // area titles
                 }
+            } else {
+                send_seaarea(p->lng, p->lat); // area titles
             }
             if (p->track_object_id || p->track_object_ship_id) {
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id); // tracking info
             }
-            LOGIx("PING replied with states.");
         } else if (type == 116) {
             // LPGP_LWPTTLREQUESTWAYPOINTS
             LOGIx("REQUESTWAYPOINTS received.");

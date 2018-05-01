@@ -6,7 +6,8 @@ struct xy32;
 namespace ss {
     class seaport {
     public:
-        std::vector<seaport_object_public> query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const;
+        //std::vector<seaport_object_public> query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const;
+        std::vector<seaport_object_public> query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const;
         const char* get_seaport_name(int id) const;
         int get_seaport_id(const char* name) const;
         seaport_object_public::point_t get_seaport_point(int id) const;
@@ -18,8 +19,7 @@ namespace ss {
         int spawn(const char* name, int xc, int yc);
         void set_name(int id, const char* name);
     private:
-        std::vector<seaport_object_public> query_near_to_packet(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
-        std::vector<seaport_object_public::value_t> query_tree(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
+        std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         bi::managed_mapped_file file;
         seaport_object_public::allocator_t alloc;
         seaport_object_public::rtree_t* rtree_ptr;

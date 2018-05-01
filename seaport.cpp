@@ -17,12 +17,17 @@ int seaport::lat_to_yc(float lat) const {
     return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
 }
 
-std::vector<seaport_object_public> seaport::query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const {
-    return query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), half_lng_ex, half_lat_ex);
-}
+//std::vector<seaport_object_public> seaport::query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const {
+//    return query_near_to_packet(lng_to_xc(lng),
+//                                lat_to_yc(lat),
+//                                half_lng_ex,
+//                                half_lat_ex);
+//}
 
-std::vector<seaport_object_public> seaport::query_near_to_packet(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
-    auto values = query_tree(xc, yc, half_lng_ex, half_lat_ex);
+std::vector<seaport_object_public> seaport::query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const {
+    const auto half_lng_ex = boost::math::iround(ex_lng / 2);
+    const auto half_lat_ex = boost::math::iround(ex_lat / 2);
+    auto values = query_tree_ex(xc, yc, half_lng_ex, half_lat_ex);
     std::vector<seaport_object_public> sop_list;
     for (std::size_t i = 0; i < values.size(); i++) {
         sop_list.emplace_back(seaport_object_public(values[i]));
@@ -30,7 +35,7 @@ std::vector<seaport_object_public> seaport::query_near_to_packet(int xc, int yc,
     return sop_list;
 }
 
-std::vector<seaport_object_public::value_t> seaport::query_tree(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
+std::vector<seaport_object_public::value_t> seaport::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
     seaport_object_public::box_t query_box(seaport_object_public::point_t(xc - half_lng_ex, yc - half_lat_ex), seaport_object_public::point_t(xc + half_lng_ex, yc + half_lat_ex));
     std::vector<seaport_object_public::value_t> result_s;
     rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
