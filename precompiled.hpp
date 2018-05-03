@@ -27,6 +27,7 @@
 #include <boost/atomic.hpp>
 #include "sealog.hpp"
 #include "spinlock.hpp"
+#include "lwlnglat.h"
 
 #define WORLD_MAP_PIXEL_RESOLUTION_WIDTH (172824)
 #define WORLD_MAP_PIXEL_RESOLUTION_HEIGHT (86412)

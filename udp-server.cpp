@@ -9,9 +9,6 @@
 #include "packet.h"
 #include "region.hpp"
 
-// should match with client value
-#define LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS (16)
-
 using namespace ss;
 
 const auto update_interval = boost::posix_time::milliseconds(75);
@@ -182,22 +179,6 @@ void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_la
              compressed_size);
     }
 }
-
-#ifdef __GNUC__
-int __builtin_ctz(unsigned int x);
-int msb_index(unsigned int v) {
-    return __builtin_ctz(v);
-}
-#else
-// MSVC perhaps...
-#include <intrin.h> 
-#pragma intrinsic(_BitScanReverse)
-int msb_index(unsigned int v) {
-    unsigned long view_scale_msb_index = 0;
-    _BitScanReverse(&view_scale_msb_index, (unsigned long)v);
-    return (int)view_scale_msb_index;
-}
-#endif
 
 static int aligned_chunk_index(const int cell_index, const int view_scale, const float ex) {
     const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f * view_scale);
@@ -405,7 +386,7 @@ void udp_server::send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, flo
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
-    reply->ts = 1;
+    reply->ts = seaport_->query_ts(xc0_aligned, yc0_aligned, view_scale);
     reply->xc0 = xc0_aligned;
     reply->yc0 = yc0_aligned;
     reply->view_scale = view_scale;
@@ -489,9 +470,11 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             // LPGP_LWPTTLPINGCHUNK
             LOGIx("PINGCHUNK received.");
             auto p = reinterpret_cast<LWPTTLPINGCHUNK*>(recv_buffer_.data());
-            const int clamped_view_scale = 1 << p->chunk_key.bf.view_scale_msb;
-            const int xc0_aligned = p->chunk_key.bf.xcc0 << msb_index(LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS * clamped_view_scale);
-            const int yc0_aligned = p->chunk_key.bf.ycc0 << msb_index(LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS * clamped_view_scale);
+            LWTTLCHUNKKEY chunk_key;
+            chunk_key.v = p->chunk_key;
+            const int clamped_view_scale = boost::algorithm::clamp(1 << chunk_key.bf.view_scale_msb, 1 << 0, 1 << 6);
+            const int xc0_aligned = chunk_key.bf.xcc0 << msb_index(LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS * clamped_view_scale);
+            const int yc0_aligned = chunk_key.bf.ycc0 << msb_index(LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS * clamped_view_scale);
             const float ex_lng = LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS;
             const float ex_lat = LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS;
             if (p->static_object == 1) {
@@ -499,7 +482,10 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                 send_land_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
             } else if (p->static_object == 2) {
                 // seaports
-                send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+                const unsigned int ts = seaport_->query_ts(xc0_aligned, yc0_aligned, clamped_view_scale);
+                if (ts > p->ts) {
+                    send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+                }
             }
         } else {
             LOGI("%1%: Unknown UDP request of type %2%",

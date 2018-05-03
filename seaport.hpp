@@ -18,6 +18,7 @@ namespace ss {
         int lat_to_yc(float lat) const;
         int spawn(const char* name, int xc, int yc);
         void set_name(int id, const char* name);
+        unsigned int query_ts(int xc0, int yc0, int view_scale) const;
     private:
         std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         bi::managed_mapped_file file;
@@ -26,8 +27,9 @@ namespace ss {
         const int res_width;
         const int res_height;
         const float km_per_cell;
-        std::unordered_map<int, std::string> id_name;
-        std::unordered_map<int, seaport_object_public::point_t> id_point;
-        std::unordered_map<std::string, int> name_id;
+        std::unordered_map<int, std::string> id_name; // seaport ID -> seaport name
+        std::unordered_map<int, seaport_object_public::point_t> id_point; // seaport ID -> seaport position
+        std::unordered_map<std::string, int> name_id; // seaport name -> seaport ID (XXX NOT UNIQUE XXX)
+        std::unordered_map<int, unsigned int> chunk_key_ts; // chunk key -> timestamp
     };
 }

@@ -73,9 +73,37 @@ seaport::seaport()
         name_id[sp[i].name] = i;
         //id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
+    std::set<std::pair<int,int> > point_set;
+    std::vector<seaport_object_public::value_t> duplicates;
     const auto bounds = rtree_ptr->bounds();
     for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
-        id_point[it->second] = it->first;
+        const auto xc = it->first.get<0>();
+        const auto yc = it->first.get<1>();
+        const auto point = std::make_pair(xc, yc);
+        if (point_set.find(point) == point_set.end()) {
+            id_point[it->second] = it->first;
+
+            // update timestamp
+            int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
+            while (view_scale) {
+                const auto chunk_key = make_chunk_key(xc, yc, view_scale);
+                chunk_key_ts[chunk_key.v]++;
+                view_scale >>= 1;
+            }
+
+            point_set.insert(point);
+        } else {
+            duplicates.push_back(*it);
+        }
+    }
+    for (const auto it : duplicates) {
+        rtree_ptr->remove(it);
+    }
+    if (point_set.size() != rtree_ptr->size()) {
+        LOGE("Seaport rtree integrity check failure. Point set size %1% != R tree size %2%",
+             point_set.size(),
+             rtree_ptr->size());
+        abort();
     }
 
     // TESTING-----------------
@@ -164,6 +192,13 @@ int seaport::spawn(const char* name, int xc, int yc) {
              __func__,
              id);
     }
+
+    int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
+    while (view_scale) {
+        const auto chunk_key = make_chunk_key(xc, yc, view_scale);
+        chunk_key_ts[chunk_key.v]++;
+        view_scale >>= 1;
+    }
     return id;
 }
 
@@ -177,4 +212,13 @@ void seaport::set_name(int id, const char* name) {
              id,
              name);
     }
+}
+
+unsigned int seaport::query_ts(int xc0, int yc0, int view_scale) const {
+    const auto chunk_key = make_chunk_key(xc0, yc0, view_scale);
+    const auto cit = chunk_key_ts.find(chunk_key.v);
+    if (cit != chunk_key_ts.cend()) {
+        return cit->second;
+    }
+    return 0;
 }
