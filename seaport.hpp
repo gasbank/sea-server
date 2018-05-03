@@ -18,7 +18,8 @@ namespace ss {
         int lat_to_yc(float lat) const;
         int spawn(const char* name, int xc, int yc);
         void set_name(int id, const char* name);
-        unsigned int query_ts(int xc0, int yc0, int view_scale) const;
+        unsigned int query_ts(const int xc0, const int yc0, const int view_scale) const;
+        unsigned int query_ts(const LWTTLCHUNKKEY chunk_key) const;
     private:
         std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         bi::managed_mapped_file file;

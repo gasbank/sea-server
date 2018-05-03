@@ -180,11 +180,6 @@ void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_la
     }
 }
 
-static int aligned_chunk_index(const int cell_index, const int view_scale, const float ex) {
-    const auto half_cell_pixel_extent = boost::math::iround(ex / 2.0f * view_scale);
-    return (cell_index + half_cell_pixel_extent) & ~(2 * half_cell_pixel_extent - 1) & ~(view_scale - 1);
-}
-
 static signed char aligned_scaled_offset(const int cell_index, const int aligned_cell_index, const int view_scale, const int view_scale_msb_index, const bool clamp, int lo, int hi) {
     const auto cell_index_scaled = cell_index & ~(view_scale - 1);
     const auto offset = cell_index_scaled - aligned_cell_index;
@@ -199,13 +194,13 @@ static signed char aligned_scaled_offset(const int cell_index, const int aligned
 void udp_server::send_land_cell(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
     const auto xc0 = sea_static_->lng_to_xc(lng);
     const auto yc0 = sea_static_->lat_to_yc(lat);
-    const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, ex_lng);
-    const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, ex_lat);
+    const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, static_cast<int>(ex_lng));
+    const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, static_cast<int>(ex_lat));
     send_land_cell_aligned(xc0_aligned,
-                                yc0_aligned,
-                                ex_lng,
-                                ex_lat,
-                                view_scale);
+                           yc0_aligned,
+                           ex_lng,
+                           ex_lat,
+                           view_scale);
 }
 
 void udp_server::send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale) {
@@ -234,7 +229,7 @@ void udp_server::send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float 
     const int view_scale_msb_index = msb_index(view_scale);
     for (const auto& v : sop_list) {
         // x-axis
-        
+
         //const auto vx0 = v.x0 &~(view_scale - 1);
         //const auto vx1 = v.x1 &~(view_scale - 1);
         const auto x_scaled_offset_0 = aligned_scaled_offset(v.x0, xc0_aligned, view_scale, view_scale_msb_index, true, xclo, xchi);// boost::numeric_cast<signed char>(boost::algorithm::clamp(vx0 - xc0_aligned, xclo, xchi) >> view_scale_msb_index);
@@ -367,8 +362,8 @@ void udp_server::send_waypoints(int ship_id) {
 void udp_server::send_seaport(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
     const auto xc0 = sea_static_->lng_to_xc(lng);
     const auto yc0 = sea_static_->lat_to_yc(lat);
-    const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, ex_lng);
-    const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, ex_lat);
+    const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, static_cast<int>(ex_lng));
+    const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, static_cast<int>(ex_lat));
     send_seaport_cell_aligned(xc0_aligned,
                               yc0_aligned,
                               ex_lng,
@@ -482,9 +477,15 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                 send_land_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
             } else if (p->static_object == 2) {
                 // seaports
-                const unsigned int ts = seaport_->query_ts(xc0_aligned, yc0_aligned, clamped_view_scale);
+                const unsigned int ts = seaport_->query_ts(chunk_key);
                 if (ts > p->ts) {
                     send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+                } else {
+                    LOGI("Chunk key (%1%,%2%,%3%) Latest ts %4%",
+                         static_cast<int>(chunk_key.bf.xcc0),
+                         static_cast<int>(chunk_key.bf.ycc0),
+                         static_cast<int>(chunk_key.bf.view_scale_msb),
+                         ts);
                 }
             }
         } else {

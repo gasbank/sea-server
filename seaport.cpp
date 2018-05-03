@@ -77,16 +77,18 @@ seaport::seaport()
     std::vector<seaport_object_public::value_t> duplicates;
     const auto bounds = rtree_ptr->bounds();
     for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
-        const auto xc = it->first.get<0>();
-        const auto yc = it->first.get<1>();
-        const auto point = std::make_pair(xc, yc);
+        const auto xc0 = it->first.get<0>();
+        const auto yc0 = it->first.get<1>();
+        const auto point = std::make_pair(xc0, yc0);
         if (point_set.find(point) == point_set.end()) {
             id_point[it->second] = it->first;
 
             // update timestamp
             int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
             while (view_scale) {
-                const auto chunk_key = make_chunk_key(xc, yc, view_scale);
+                const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+                const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+                const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
                 chunk_key_ts[chunk_key.v]++;
                 view_scale >>= 1;
             }
@@ -214,8 +216,11 @@ void seaport::set_name(int id, const char* name) {
     }
 }
 
-unsigned int seaport::query_ts(int xc0, int yc0, int view_scale) const {
-    const auto chunk_key = make_chunk_key(xc0, yc0, view_scale);
+unsigned int seaport::query_ts(const int xc0, const int yc0, const int view_scale) const {
+    return query_ts(make_chunk_key(xc0, yc0, view_scale));
+}
+
+unsigned int seaport::query_ts(const LWTTLCHUNKKEY chunk_key) const {
     const auto cit = chunk_key_ts.find(chunk_key.v);
     if (cit != chunk_key_ts.cend()) {
         return cit->second;
