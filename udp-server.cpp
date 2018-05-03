@@ -244,6 +244,7 @@ void udp_server::send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float 
     boost::shared_ptr<LWPTTLSTATICSTATE2> reply(new LWPTTLSTATICSTATE2);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE2));
     reply->type = 115; // LPGP_LWPTTLSTATICSTATE2
+    reply->ts = 1;
     reply->xc0 = xc0_aligned;
     reply->yc0 = yc0_aligned;
     reply->view_scale = view_scale;
@@ -404,6 +405,7 @@ void udp_server::send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, flo
     boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
+    reply->ts = 1;
     reply->xc0 = xc0_aligned;
     reply->yc0 = yc0_aligned;
     reply->view_scale = view_scale;
