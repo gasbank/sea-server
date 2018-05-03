@@ -16,10 +16,11 @@ namespace ss {
         int get_nearest_two(const xy32& pos, int& id1, std::string& name1, int& id2, std::string& name2) const;
         int lng_to_xc(float lng) const;
         int lat_to_yc(float lat) const;
-        int spawn(const char* name, int xc, int yc);
+        int spawn(const char* name, int xc0, int yc0);
+        void despawn(int id);
         void set_name(int id, const char* name);
-        unsigned int query_ts(const int xc0, const int yc0, const int view_scale) const;
-        unsigned int query_ts(const LWTTLCHUNKKEY chunk_key) const;
+        long long query_ts(const int xc0, const int yc0, const int view_scale) const;
+        long long query_ts(const LWTTLCHUNKKEY chunk_key) const;
     private:
         std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         bi::managed_mapped_file file;
@@ -31,6 +32,6 @@ namespace ss {
         std::unordered_map<int, std::string> id_name; // seaport ID -> seaport name
         std::unordered_map<int, seaport_object_public::point_t> id_point; // seaport ID -> seaport position
         std::unordered_map<std::string, int> name_id; // seaport name -> seaport ID (XXX NOT UNIQUE XXX)
-        std::unordered_map<int, unsigned int> chunk_key_ts; // chunk key -> timestamp
+        std::unordered_map<int, long long> chunk_key_ts; // chunk key -> timestamp
     };
 }

@@ -73,6 +73,9 @@ seaport::seaport()
         name_id[sp[i].name] = i;
         //id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
+
+    auto monotonic_uptime = std::chrono::steady_clock::now().time_since_epoch().count();
+
     std::set<std::pair<int,int> > point_set;
     std::vector<seaport_object_public::value_t> duplicates;
     const auto bounds = rtree_ptr->bounds();
@@ -89,7 +92,7 @@ seaport::seaport()
                 const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
                 const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
                 const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
-                chunk_key_ts[chunk_key.v]++;
+                chunk_key_ts[chunk_key.v] = monotonic_uptime;
                 view_scale >>= 1;
             }
 
@@ -177,8 +180,8 @@ int seaport::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int&
     return 0;
 }
 
-int seaport::spawn(const char* name, int xc, int yc) {
-    seaport_object_public::point_t new_port_point{ xc, yc };
+int seaport::spawn(const char* name, int xc0, int yc0) {
+    seaport_object_public::point_t new_port_point{ xc0, yc0 };
     if (rtree_ptr->qbegin(bgi::intersects(new_port_point)) != rtree_ptr->qend()) {
         // already exists
         return -1;
@@ -197,11 +200,38 @@ int seaport::spawn(const char* name, int xc, int yc) {
 
     int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
     while (view_scale) {
-        const auto chunk_key = make_chunk_key(xc, yc, view_scale);
+        const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
         chunk_key_ts[chunk_key.v]++;
         view_scale >>= 1;
     }
     return id;
+}
+
+void seaport::despawn(int id) {
+    auto it = id_point.find(id);
+    if (it == id_point.end()) {
+        LOGE("%1%: id not found (%2%)",
+             __func__,
+             id);
+        return;
+    }
+    
+    int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
+    const auto xc0 = it->second.get<0>();
+    const auto yc0 = it->second.get<1>();
+    while (view_scale) {
+        const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
+        chunk_key_ts[chunk_key.v]++;
+        view_scale >>= 1;
+    }
+    rtree_ptr->remove(std::make_pair(it->second, id));
+    id_point.erase(it);
+    id_name.erase(id);
+    //name_id
 }
 
 void seaport::set_name(int id, const char* name) {
@@ -216,11 +246,11 @@ void seaport::set_name(int id, const char* name) {
     }
 }
 
-unsigned int seaport::query_ts(const int xc0, const int yc0, const int view_scale) const {
+long long seaport::query_ts(const int xc0, const int yc0, const int view_scale) const {
     return query_ts(make_chunk_key(xc0, yc0, view_scale));
 }
 
-unsigned int seaport::query_ts(const LWTTLCHUNKKEY chunk_key) const {
+long long seaport::query_ts(const LWTTLCHUNKKEY chunk_key) const {
     const auto cit = chunk_key_ts.find(chunk_key.v);
     if (cit != chunk_key_ts.cend()) {
         return cit->second;

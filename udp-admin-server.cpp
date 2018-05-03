@@ -135,6 +135,11 @@ struct name_port_command {
     char name[64];
 };
 
+struct delete_port_command {
+    command _;
+    int port_id;
+};
+
 void udp_admin_server::handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
     if (!error || error == boost::asio::error::message_size) {
         command* cp = reinterpret_cast<command*>(recv_buffer_.data());
@@ -259,6 +264,14 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             LOGI("Name Port type: %1%", static_cast<int>(cp->type));
             const name_port_command* name_port = reinterpret_cast<name_port_command*>(recv_buffer_.data());;
             seaport_->set_name(name_port->port_id, name_port->name);
+            break;
+        }
+        case 8: // Delete Port
+        {
+            assert(bytes_transferred == sizeof(delete_port_command));
+            LOGI("Delete Port type: %1%", static_cast<int>(cp->type));
+            const delete_port_command* spawn = reinterpret_cast<delete_port_command*>(recv_buffer_.data());;
+            seaport_->despawn(spawn->port_id);
             break;
         }
         default:

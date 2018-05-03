@@ -477,7 +477,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                 send_land_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
             } else if (p->static_object == 2) {
                 // seaports
-                const unsigned int ts = seaport_->query_ts(chunk_key);
+                const auto ts = seaport_->query_ts(chunk_key);
                 if (ts > p->ts) {
                     send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
                 } else {
