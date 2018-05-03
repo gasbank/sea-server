@@ -14,7 +14,7 @@
 
 using namespace ss;
 
-constexpr long long get_monotonic_uptime() {
+static long long get_monotonic_uptime() {
     return std::chrono::steady_clock::now().time_since_epoch().count();
 }
 
