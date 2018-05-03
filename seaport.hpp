@@ -23,6 +23,7 @@ namespace ss {
         long long query_ts(const LWTTLCHUNKKEY chunk_key) const;
     private:
         std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
+        void update_chunk_key_ts(int xc0, int yc0);
         bi::managed_mapped_file file;
         seaport_object_public::allocator_t alloc;
         seaport_object_public::rtree_t* rtree_ptr;

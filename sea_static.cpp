@@ -14,6 +14,10 @@
 
 using namespace ss;
 
+constexpr long long get_monotonic_uptime() {
+    return std::chrono::steady_clock::now().time_since_epoch().count();
+}
+
 int sea_static::lng_to_xc(float lng) const {
     //return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
     return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2));
@@ -156,6 +160,12 @@ sea_static::sea_static()
     load_from_dump_if_empty(water_rtree_ptr, "rtree/water_raw_xy32xy32.bin");
     mark_sea_water(water_rtree_ptr);
 
+    /*const auto land_bounds = land_rtree_ptr->bounds();
+    size_t c = 0;
+    for (auto it = land_rtree_ptr->begin(); it != land_rtree_ptr->end(); it++) {
+        c++;
+    }*/
+
     // TESTING-----------------
     //sea_static_object_public::box_t origin_land_cell{ {-32,-32},{32,32} };
     sea_static_object_public::box_t origin_land_cell{ { 0,0 },{ 1,1 } };
@@ -239,4 +249,33 @@ bool sea_static::is_sea_water(const xy32& cell) const {
         return std::binary_search(sea_water_vector.begin(), sea_water_vector.end(), it->second);
     }
     return false;
+}
+
+long long sea_static::query_ts(const int xc0, const int yc0, const int view_scale) const {
+    return query_ts(make_chunk_key(xc0, yc0, view_scale));
+}
+
+long long sea_static::query_ts(const LWTTLCHUNKKEY chunk_key) const {
+    const auto cit = chunk_key_ts.find(chunk_key.v);
+    if (cit != chunk_key_ts.cend()) {
+        return cit->second;
+    }
+    return 0;
+}
+
+void sea_static::update_chunk_key_ts(int xc0, int yc0) {
+    int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
+    const auto monotonic_uptime = get_monotonic_uptime();
+    while (view_scale) {
+        const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
+        auto it = chunk_key_ts.find(chunk_key.v);
+        if (it != chunk_key_ts.end()) {
+            it->second++;
+        } else {
+            chunk_key_ts[chunk_key.v] = monotonic_uptime;
+        }
+        view_scale >>= 1;
+    }
 }

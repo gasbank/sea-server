@@ -49,6 +49,10 @@ typedef struct _LWTTLDATA_SEAPORT {
     float lng;
 } LWTTLDATA_SEAPORT;
 
+constexpr long long get_monotonic_uptime() {
+    return std::chrono::steady_clock::now().time_since_epoch().count();
+}
+
 seaport::seaport()
     : file(bi::open_or_create, SEAPORT_RTREE_FILENAME, SEAPORT_RTREE_MMAP_MAX_SIZE)
     , alloc(file.get_segment_manager())
@@ -74,7 +78,7 @@ seaport::seaport()
         //id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
 
-    auto monotonic_uptime = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto monotonic_uptime = get_monotonic_uptime();
 
     std::set<std::pair<int,int> > point_set;
     std::vector<seaport_object_public::value_t> duplicates;
@@ -86,16 +90,8 @@ seaport::seaport()
         if (point_set.find(point) == point_set.end()) {
             id_point[it->second] = it->first;
 
-            // update timestamp
-            int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
-            while (view_scale) {
-                const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
-                const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
-                const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
-                chunk_key_ts[chunk_key.v] = monotonic_uptime;
-                view_scale >>= 1;
-            }
-
+            update_chunk_key_ts(xc0, yc0);
+            
             point_set.insert(point);
         } else {
             duplicates.push_back(*it);
@@ -180,6 +176,23 @@ int seaport::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int&
     return 0;
 }
 
+void seaport::update_chunk_key_ts(int xc0, int yc0) {
+    int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
+    const auto monotonic_uptime = get_monotonic_uptime();
+    while (view_scale) {
+        const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
+        const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
+        auto it = chunk_key_ts.find(chunk_key.v);
+        if (it != chunk_key_ts.end()) {
+            it->second++;
+        } else {
+            chunk_key_ts[chunk_key.v] = monotonic_uptime;
+        }
+        view_scale >>= 1;
+    }
+}
+
 int seaport::spawn(const char* name, int xc0, int yc0) {
     seaport_object_public::point_t new_port_point{ xc0, yc0 };
     if (rtree_ptr->qbegin(bgi::intersects(new_port_point)) != rtree_ptr->qend()) {
@@ -198,14 +211,7 @@ int seaport::spawn(const char* name, int xc0, int yc0) {
              id);
     }
 
-    int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
-    while (view_scale) {
-        const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
-        const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
-        const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
-        chunk_key_ts[chunk_key.v]++;
-        view_scale >>= 1;
-    }
+    update_chunk_key_ts(xc0, yc0);
     return id;
 }
 
@@ -218,16 +224,10 @@ void seaport::despawn(int id) {
         return;
     }
     
-    int view_scale = LNGLAT_VIEW_SCALE_PING_MAX;
     const auto xc0 = it->second.get<0>();
     const auto yc0 = it->second.get<1>();
-    while (view_scale) {
-        const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
-        const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
-        const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
-        chunk_key_ts[chunk_key.v]++;
-        view_scale >>= 1;
-    }
+    update_chunk_key_ts(xc0, yc0);
+
     rtree_ptr->remove(std::make_pair(it->second, id));
     id_point.erase(it);
     id_name.erase(id);

@@ -475,17 +475,26 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             if (p->static_object == 1) {
                 // land cells
                 send_land_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+                LOGIx("Land cells Chunk key (%1%,%2%,%3%) Sent!",
+                      static_cast<int>(chunk_key.bf.xcc0),
+                      static_cast<int>(chunk_key.bf.ycc0),
+                      static_cast<int>(chunk_key.bf.view_scale_msb));
             } else if (p->static_object == 2) {
                 // seaports
                 const auto ts = seaport_->query_ts(chunk_key);
                 if (ts > p->ts) {
                     send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+                    LOGIx("Seaports Chunk key (%1%,%2%,%3%) Sent! (latest ts %4%)",
+                          static_cast<int>(chunk_key.bf.xcc0),
+                          static_cast<int>(chunk_key.bf.ycc0),
+                          static_cast<int>(chunk_key.bf.view_scale_msb),
+                          ts);
                 } else {
-                    LOGI("Chunk key (%1%,%2%,%3%) Latest ts %4%",
-                         static_cast<int>(chunk_key.bf.xcc0),
-                         static_cast<int>(chunk_key.bf.ycc0),
-                         static_cast<int>(chunk_key.bf.view_scale_msb),
-                         ts);
+                    LOGIx("Chunk key (%1%,%2%,%3%) Not Sent! (latest ts %4%)",
+                          static_cast<int>(chunk_key.bf.xcc0),
+                          static_cast<int>(chunk_key.bf.ycc0),
+                          static_cast<int>(chunk_key.bf.view_scale_msb),
+                          ts);
                 }
             }
         } else {

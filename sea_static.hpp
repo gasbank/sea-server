@@ -17,10 +17,13 @@ namespace ss {
         bool is_sea_water(const xy32& cell) const;
         int lng_to_xc(float lng) const;
         int lat_to_yc(float lat) const;
+        long long query_ts(const int xc0, const int yc0, const int view_scale) const;
+        long long query_ts(const LWTTLCHUNKKEY chunk_key) const;
     private:
         std::vector<sea_static_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         std::vector<sea_static_object_public::value_t> query_tree(int xc0, int yc0, int xc1, int yc1) const;
         void mark_sea_water(sea_static_object_public::rtree_t* rtree);
+        void update_chunk_key_ts(int xc0, int yc0);
         bi::managed_mapped_file land_file;
         sea_static_object_public::allocator_t land_alloc;
         sea_static_object_public::rtree_t* land_rtree_ptr;
@@ -37,5 +40,6 @@ namespace ss {
         //typedef std::unordered_set<int, std::hash<int>, std::equal_to<int>, sea_static_object_public::allocator_t> sea_water_set_t;
         //sea_water_set_t* sea_water_set;
         std::vector<int> sea_water_vector;
+        std::unordered_map<int, long long> chunk_key_ts; // chunk key -> timestamp
     };
 }
