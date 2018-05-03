@@ -24,8 +24,10 @@ namespace ss {
         void update();
         void start_receive();
         void send_full_state(float lng, float lat, float ex_lng, float ex_lat, int view_scale);
-        void send_static_state2(float lng, float lat, float ex_lng, float ex_lat, int view_scale);
+        void send_land_cell(float lng, float lat, float ex_lng, float ex_lat, int view_scale);
+        void send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale);
         void send_seaport(float lng, float lat, float ex_lng, float ex_lat, int view_scale);
+        void send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale);
         void send_track_object_coords(int track_object_id, int track_object_ship_id);
         void send_seaarea(float lng, float lat);
         void send_waypoints(int ship_id);

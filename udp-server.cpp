@@ -9,6 +9,9 @@
 #include "packet.h"
 #include "region.hpp"
 
+// should match with client value
+#define LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS (16)
+
 using namespace ss;
 
 const auto update_interval = boost::posix_time::milliseconds(75);
@@ -212,13 +215,21 @@ static signed char aligned_scaled_offset(const int cell_index, const int aligned
     return 0;
 }
 
-void udp_server::send_static_state2(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
+void udp_server::send_land_cell(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
     const auto xc0 = sea_static_->lng_to_xc(lng);
     const auto yc0 = sea_static_->lat_to_yc(lat);
-    const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
-    const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
     const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, ex_lng);
     const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, ex_lat);
+    send_land_cell_aligned(xc0_aligned,
+                                yc0_aligned,
+                                ex_lng,
+                                ex_lat,
+                                view_scale);
+}
+
+void udp_server::send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale) {
+    const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
+    const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
     auto sop_list = sea_static_->query_near_to_packet(xc0_aligned,
                                                       yc0_aligned,
                                                       ex_lng * view_scale,
@@ -270,7 +281,7 @@ void udp_server::send_static_state2(float lng, float lat, float ex_lng, float ex
         }
     }
     reply->count = static_cast<int>(reply_obj_index);
-    LOGIx("Querying (%1%,%2%) extent (%3%,%4%) => %5% hit(s).", lng, lat, ex_lng * view_scale, ex_lng * view_scale, reply_obj_index);
+    LOGIx("Querying (%1%,%2%) extent (%3%,%4%) => %5% hit(s).", xc0_aligned, yc0_aligned, ex_lng * view_scale, ex_lng * view_scale, reply_obj_index);
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE2), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
@@ -374,10 +385,18 @@ void udp_server::send_waypoints(int ship_id) {
 void udp_server::send_seaport(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
     const auto xc0 = sea_static_->lng_to_xc(lng);
     const auto yc0 = sea_static_->lat_to_yc(lat);
-    const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
-    const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
     const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, ex_lng);
     const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, ex_lat);
+    send_seaport_cell_aligned(xc0_aligned,
+                              yc0_aligned,
+                              ex_lng,
+                              ex_lat,
+                              view_scale);
+}
+
+void udp_server::send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale) {
+    const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
+    const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
     auto sop_list = seaport_->query_near_to_packet(xc0_aligned,
                                                    yc0_aligned,
                                                    ex_lng * view_scale,
@@ -447,25 +466,10 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             // LPGP_LWPTTLPING
             LOGIx("PING received.");
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
-            send_full_state(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // ships (vessels)
-            if (p->static_object == 1) {
-                // land cells
-                if (p->ex_lng != p->ex_lat) {
-                    LOGE("Extents along both axis should be the same when requesting land cells! No reply will be made.");
-                } else {
-                    send_static_state2(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
-                }
-            } else if (p->static_object == 2) {
-                // seaports
-                if (p->ex_lng != p->ex_lat) {
-                    LOGE("Extents along both axis should be the same when requesting seaports! No reply will be made.");
-                } else {
-                    send_seaport(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
-                }
-            } else {
-                // area titles
-                send_seaarea(p->lng, p->lat);
-            }
+            // ships (vessels)
+            send_full_state(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
+            // area titles
+            send_seaarea(p->lng, p->lat);
             if (p->track_object_id || p->track_object_ship_id) {
                 // tracking info
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id);
@@ -479,6 +483,22 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
         } else if (type == 118) {
             // LPGP_LWPTTLPINGFLUSH
             LOGI("PINGFLUSH received.");
+        } else if (type == 119) {
+            // LPGP_LWPTTLPINGCHUNK
+            LOGIx("PINGCHUNK received.");
+            auto p = reinterpret_cast<LWPTTLPINGCHUNK*>(recv_buffer_.data());
+            const int clamped_view_scale = 1 << p->chunk_key.bf.view_scale_msb;
+            const int xc0_aligned = p->chunk_key.bf.xcc0 << msb_index(LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS * clamped_view_scale);
+            const int yc0_aligned = p->chunk_key.bf.ycc0 << msb_index(LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS * clamped_view_scale);
+            const float ex_lng = LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS;
+            const float ex_lat = LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS;
+            if (p->static_object == 1) {
+                // land cells
+                send_land_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+            } else if (p->static_object == 2) {
+                // seaports
+                send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+            }
         } else {
             LOGI("%1%: Unknown UDP request of type %2%",
                  __func__,
