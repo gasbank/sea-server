@@ -448,18 +448,27 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             LOGIx("PING received.");
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
             send_full_state(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // ships (vessels)
-            if (p->static_object) {
+            if (p->static_object == 1) {
+                // land cells
                 if (p->ex_lng != p->ex_lat) {
-                    LOGE("Extents along both axis should be the same when requesting statics! No reply will be made.");
+                    LOGE("Extents along both axis should be the same when requesting land cells! No reply will be made.");
                 } else {
-                    send_static_state2(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // land cells
-                    send_seaport(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale); // seaports
+                    send_static_state2(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
+                }
+            } else if (p->static_object == 2) {
+                // seaports
+                if (p->ex_lng != p->ex_lat) {
+                    LOGE("Extents along both axis should be the same when requesting seaports! No reply will be made.");
+                } else {
+                    send_seaport(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
                 }
             } else {
-                send_seaarea(p->lng, p->lat); // area titles
+                // area titles
+                send_seaarea(p->lng, p->lat);
             }
             if (p->track_object_id || p->track_object_ship_id) {
-                send_track_object_coords(p->track_object_id, p->track_object_ship_id); // tracking info
+                // tracking info
+                send_track_object_coords(p->track_object_id, p->track_object_ship_id);
             }
         } else if (type == 116) {
             // LPGP_LWPTTLREQUESTWAYPOINTS
