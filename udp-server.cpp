@@ -497,6 +497,11 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                           ts);
                 }
             }
+        } else if (type == 120) {
+            // LPGP_LWPTTLPINGSINGLECELL
+            LOGIx("PINGSINGLECELL received.");
+            auto p = reinterpret_cast<LWPTTLPINGSINGLECELL*>(recv_buffer_.data());
+            send_single_cell(p->xc0, p->yc0);
         } else {
             LOGI("%1%: Unknown UDP request of type %2%",
                  __func__,
@@ -573,4 +578,34 @@ std::shared_ptr<const route> udp_server::find_route_map_by_ship_id(int ship_id) 
         }
     }
     return std::shared_ptr<const route>();
+}
+
+void udp_server::send_single_cell(int xc0, int yc0) {
+    boost::shared_ptr<LWPTTLSINGLECELL> reply(new LWPTTLSINGLECELL);
+    memset(reply.get(), 0, sizeof(LWPTTLSINGLECELL));
+    reply->type = 121; // LPGP_LWPTTLSINGLECELL
+    reply->xc0 = xc0;
+    reply->yc0 = yc0;
+    reply->attr = sea_static_->query_single_cell(xc0, yc0);
+    int seaport_id = -1;
+    auto seaport_name = seaport_->query_single_cell(xc0, yc0, seaport_id);
+    reply->port_id = seaport_id;
+    if (seaport_id >= 0 && seaport_name) {
+        strncpy(reply->port_name, seaport_name, boost::size(reply->port_name));
+        reply->port_name[boost::size(reply->port_name) - 1] = 0;
+    }
+    char compressed[1500];
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSINGLECELL), static_cast<int>(boost::size(compressed)));
+    if (compressed_size > 0) {
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                              remote_endpoint_,
+                              boost::bind(&udp_server::handle_send,
+                                          this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    } else {
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
+    }
 }

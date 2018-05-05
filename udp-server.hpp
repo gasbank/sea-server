@@ -32,6 +32,7 @@ namespace ss {
         void send_seaarea(float lng, float lat);
         void send_waypoints(int ship_id);
         std::shared_ptr<const route> find_route_map_by_ship_id(int ship_id) const;
+        void send_single_cell(int xc0, int yc0);
 
         // How to test handle_receive():
         // $ perl -e "print pack('ff',10.123,20.456)" > /dev/udp/127.0.0.1/3100

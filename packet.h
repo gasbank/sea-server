@@ -158,6 +158,29 @@ typedef struct _LWPTTLPINGCHUNK {
     int chunk_key;
     long long ts;
 } LWPTTLPINGCHUNK;
+
+// UDP
+typedef struct _LWPTTLPINGSINGLECELL {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    int xc0;
+    int yc0;
+} LWPTTLPINGSINGLECELL;
+
+// UDP
+typedef struct _LWPTTLSINGLECELL {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    int xc0;
+    int yc0;
+    int port_id;
+    char port_name[64];
+    unsigned int attr;
+} LWPTTLSINGLECELL;
 /*
 * END: should sync with packet.h in sea-server
 */

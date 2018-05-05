@@ -1,6 +1,7 @@
 #include "precompiled.hpp"
 #include "sea_static.hpp"
 #include "astarrtree.hpp"
+#include "packet.h"
 
 #define WORLDMAP_RTREE_MMAP_MAX_SIZE_RATIO (sizeof(size_t) / 4)
 #define WORLDMAP_RTREE_MMAP_MAX_SIZE(mb) ((mb) * 1024 * 1024 * WORLDMAP_RTREE_MMAP_MAX_SIZE_RATIO)
@@ -278,4 +279,19 @@ void sea_static::update_chunk_key_ts(int xc0, int yc0) {
         }
         view_scale >>= 1;
     }
+}
+
+unsigned int sea_static::query_single_cell(int xc0, int yc0) const {
+    unsigned int attr = 0;
+    const auto xy32pos = xy32{ xc0, yc0 };
+    const auto box = astarrtree::box_t_from_xy(xy32pos);
+    const auto land_it = land_rtree_ptr->qbegin(bgi::contains(box));
+    attr |= land_it != land_rtree_ptr->qend() ? (1 << 0) : 0;
+
+    const auto water_it = water_rtree_ptr->qbegin(bgi::contains(box));
+    attr |= water_it != water_rtree_ptr->qend() ? (1 << 1) : 0;
+
+    attr |= is_sea_water(xy32pos) ? (1 << 2) : 0;
+
+    return attr;
 }
