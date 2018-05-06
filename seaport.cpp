@@ -259,7 +259,7 @@ long long seaport::query_ts(const LWTTLCHUNKKEY chunk_key) const {
 }
 
 const char* seaport::query_single_cell(int xc0, int yc0, int& id) const {
-    const auto seaport_it = rtree_ptr->qbegin(bgi::contains(seaport_object_public::point_t{ xc0, yc0 }));
+    const auto seaport_it = rtree_ptr->qbegin(bgi::intersects(seaport_object_public::point_t{ xc0, yc0 }));
     if (seaport_it != rtree_ptr->qend()) {
         id = seaport_it->second;
         return get_seaport_name(seaport_it->second);
