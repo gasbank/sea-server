@@ -287,6 +287,83 @@ void udp_server::send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float 
     }
 }
 
+void udp_server::send_land_cell_aligned_bitmap(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale) {
+
+    ex_lng *= 8;
+    ex_lat *= 8;
+
+    const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
+    const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
+    auto sop_list = sea_static_->query_near_to_packet(xc0_aligned,
+                                                      yc0_aligned,
+                                                      ex_lng * view_scale,
+                                                      ex_lat * view_scale);
+    const auto xclo = -half_lng_cell_pixel_extent;
+    const auto xchi = +half_lng_cell_pixel_extent;
+    const auto yclo = -half_lat_cell_pixel_extent;
+    const auto ychi = +half_lat_cell_pixel_extent;
+    boost::shared_ptr<LWPTTLSTATICSTATE3> reply(new LWPTTLSTATICSTATE3);
+    memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE3));
+    reply->type = 122; // LPGP_LWPTTLSTATICSTATE3
+    reply->ts = 1;
+    reply->xc0 = xc0_aligned;
+    reply->yc0 = yc0_aligned;
+    reply->view_scale = view_scale;
+    size_t reply_obj_index = 0;
+    const int view_scale_msb_index = msb_index(view_scale);
+    const auto half_lng_cell_pixel_extent_scaled = half_lng_cell_pixel_extent >> view_scale_msb_index;
+    for (const auto& v : sop_list) {
+        // x-axis
+        const auto x_scaled_offset_0 = aligned_scaled_offset(v.x0, xc0_aligned, view_scale, view_scale_msb_index, true, xclo, xchi);
+        const auto x_scaled_offset_1 = aligned_scaled_offset(v.x1, xc0_aligned, view_scale, view_scale_msb_index, true, xclo, xchi);
+        // skip degenerated one
+        if (x_scaled_offset_0 >= x_scaled_offset_1) {
+            continue;
+        }
+        // y-axis
+        const auto y_scaled_offset_0 = aligned_scaled_offset(v.y0, yc0_aligned, view_scale, view_scale_msb_index, true, yclo, ychi);
+        const auto y_scaled_offset_1 = aligned_scaled_offset(v.y1, yc0_aligned, view_scale, view_scale_msb_index, true, yclo, ychi);
+        // skip degenerated one
+        if (y_scaled_offset_0 >= y_scaled_offset_1) {
+            continue;
+        }
+        const auto x0 = half_lng_cell_pixel_extent_scaled + x_scaled_offset_0;
+        const auto y0 = half_lng_cell_pixel_extent_scaled + y_scaled_offset_0;
+        const auto x1 = half_lng_cell_pixel_extent_scaled + x_scaled_offset_1;
+        const auto y1 = half_lng_cell_pixel_extent_scaled + y_scaled_offset_1;
+        for (auto y = y0; y < y1; y++) {
+            for (auto x = x0; x < x1; x++) {
+                const auto xq = x / (sizeof(int) * 8);
+                const auto xr = x % (sizeof(int) * 8);
+                assert(y >= 0 && y < boost::size(reply->bitmap));
+                assert(xq >= 0 && xq < boost::size(reply->bitmap[0]));
+                reply->bitmap[y][xq] |= 1 << xr;
+            }
+        }
+        reply_obj_index++;
+    }
+    LOGIx("Querying (%1%,%2%) extent (%3%,%4%) => %5% hit(s).", xc0_aligned, yc0_aligned, ex_lng * view_scale, ex_lng * view_scale, reply_obj_index);
+    char compressed[1500];
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSTATICSTATE3), static_cast<int>(boost::size(compressed)));
+    if (compressed_size > 0) {
+        boost::crc_32_type result;
+        result.process_bytes(compressed, compressed_size);
+        auto crc = result.checksum();
+        LOGIx("CRC: %1%", crc);
+
+        socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                              remote_endpoint_,
+                              boost::bind(&udp_server::handle_send,
+                                          this,
+                                          boost::asio::placeholders::error,
+                                          boost::asio::placeholders::bytes_transferred));
+    } else {
+        LOGE("%1%: LZ4_compress_default() error! - %2%",
+             __func__,
+             compressed_size);
+    }
+}
+
 void udp_server::send_track_object_coords(int track_object_id, int track_object_ship_id) {
     sea_object* obj = nullptr;
     if (track_object_id && track_object_ship_id) {
@@ -475,6 +552,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             if (p->static_object == 1) {
                 // land cells
                 send_land_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
+                //send_land_cell_aligned_bitmap(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
                 LOGIx("Land cells Chunk key (%1%,%2%,%3%) Sent!",
                       static_cast<int>(chunk_key.bf.xcc0),
                       static_cast<int>(chunk_key.bf.ycc0),

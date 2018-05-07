@@ -39,7 +39,7 @@ typedef struct _LWPTTLSTATICSTATE {
     unsigned char padding1;
     unsigned char padding2;
     int count;
-    LWPTTLSTATICOBJECT obj[256+128];
+    LWPTTLSTATICOBJECT obj[256 + 128];
 } LWPTTLSTATICSTATE;
 
 // UDP
@@ -61,8 +61,21 @@ typedef struct _LWPTTLSTATICSTATE2 {
     int yc0;
     int view_scale;
     int count;
-    LWPTTLSTATICOBJECT2 obj[256+128];
+    LWPTTLSTATICOBJECT2 obj[256 + 128];
 } LWPTTLSTATICSTATE2;
+
+// UDP
+typedef struct _LWPTTLSTATICSTATE3 {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    long long ts;
+    int xc0;
+    int yc0;
+    int view_scale;
+    unsigned int bitmap[128][128 / 8];
+} LWPTTLSTATICSTATE3;
 
 // UDP
 typedef struct _LWPTTLSEAPORTOBJECT {
