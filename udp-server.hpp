@@ -9,6 +9,7 @@ namespace ss {
     class seaport;
     class route;
     class region;
+    class city;
 
     class udp_server {
 
@@ -17,7 +18,8 @@ namespace ss {
                    std::shared_ptr<sea> sea,
                    std::shared_ptr<sea_static> sea_static,
                    std::shared_ptr<seaport> seaport,
-                   std::shared_ptr<region> region);
+                   std::shared_ptr<region> region,
+                   std::shared_ptr<city> city);
         bool set_route(int id, int seaport_id1, int seaport_id2);
     private:
         void make_test_route();
@@ -28,6 +30,7 @@ namespace ss {
         void send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale);
         void send_seaport(float lng, float lat, float ex_lng, float ex_lat, int view_scale);
         void send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale);
+        void send_city_cell_aligned(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale);
         void send_land_cell_aligned_bitmap(int xc0_aligned, int yc0_aligned, float ex_lng, float ex_lat, int view_scale);
         void send_track_object_coords(int track_object_id, int track_object_ship_id);
         void send_seaarea(float lng, float lat);
@@ -55,6 +58,7 @@ namespace ss {
         std::shared_ptr<sea_static> sea_static_;
         std::shared_ptr<seaport> seaport_;
         std::shared_ptr<region> region_;
+        std::shared_ptr<city> city_;
         std::unordered_map<int, std::shared_ptr<route> > route_map_; // id -> route
         int tick_seq_;
     };

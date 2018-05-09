@@ -194,6 +194,28 @@ typedef struct _LWPTTLSINGLECELL {
     char port_name[64];
     unsigned int attr;
 } LWPTTLSINGLECELL;
+
+// UDP
+typedef struct _LWPTTLCITYOBJECT {
+    signed char x_scaled_offset_0;
+    signed char y_scaled_offset_0;
+    unsigned char population_level;
+    unsigned char padding0;
+} LWPTTLCITYOBJECT;
+
+// UDP
+typedef struct _LWPTTLCITYSTATE {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+    long long ts;
+    int xc0;
+    int yc0;
+    int view_scale;
+    int count;
+    LWPTTLCITYOBJECT obj[128];
+} LWPTTLCITYSTATE;
 /*
 * END: should sync with packet.h in sea-server
 */
