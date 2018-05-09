@@ -6,3 +6,4 @@ cmake-build-debug
 /rtree/*.dat
 /rtree/*.bin
 cmake-build-release
+workspace.xml
