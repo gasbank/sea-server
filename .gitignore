@@ -5,3 +5,4 @@ cmake-build-debug
 /rtree/seaport.dat
 /rtree/*.dat
 /rtree/*.bin
+cmake-build-release
