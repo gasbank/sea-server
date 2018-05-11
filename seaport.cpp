@@ -49,10 +49,6 @@ typedef struct _LWTTLDATA_SEAPORT {
     float lng;
 } LWTTLDATA_SEAPORT;
 
-static long long get_monotonic_uptime() {
-    return std::chrono::steady_clock::now().time_since_epoch().count();
-}
-
 seaport::seaport()
     : file(bi::open_or_create, SEAPORT_RTREE_FILENAME, SEAPORT_RTREE_MMAP_MAX_SIZE)
     , alloc(file.get_segment_manager())
@@ -67,10 +63,10 @@ seaport::seaport()
     int count = static_cast<int>(region.get_size() / sizeof(LWTTLDATA_SEAPORT));
     // dump seaports.dat into r-tree data if r-tree is empty.
     if (rtree_ptr->size() == 0) {
-        for (int i = 0; i < count; i++) {
+        /*for (int i = 0; i < count; i++) {
             seaport_object_public::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
             rtree_ptr->insert(std::make_pair(point, i));
-        }
+        }*/
     }
     for (int i = 0; i < count; i++) {
         id_name[i] = sp[i].name;
@@ -183,13 +179,17 @@ void seaport::update_chunk_key_ts(int xc0, int yc0) {
         const auto xc0_aligned = aligned_chunk_index(xc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
         const auto yc0_aligned = aligned_chunk_index(yc0, view_scale, LNGLAT_SEA_PING_EXTENT_IN_CELL_PIXELS);
         const auto chunk_key = make_chunk_key(xc0_aligned, yc0_aligned, view_scale);
-        auto it = chunk_key_ts.find(chunk_key.v);
-        if (it != chunk_key_ts.end()) {
-            it->second++;
-        } else {
-            chunk_key_ts[chunk_key.v] = monotonic_uptime;
-        }
+        update_single_chunk_key_ts(chunk_key, monotonic_uptime);
         view_scale >>= 1;
+    }
+}
+
+void seaport::update_single_chunk_key_ts(const LWTTLCHUNKKEY& chunk_key, long long monotonic_uptime) {
+    auto it = chunk_key_ts.find(chunk_key.v);
+    if (it != chunk_key_ts.end()) {
+        it->second++;
+    } else {
+        chunk_key_ts[chunk_key.v] = monotonic_uptime;
     }
 }
 
@@ -250,7 +250,7 @@ long long seaport::query_ts(const int xc0, const int yc0, const int view_scale) 
     return query_ts(make_chunk_key(xc0, yc0, view_scale));
 }
 
-long long seaport::query_ts(const LWTTLCHUNKKEY chunk_key) const {
+long long seaport::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
     const auto cit = chunk_key_ts.find(chunk_key.v);
     if (cit != chunk_key_ts.cend()) {
         return cit->second;

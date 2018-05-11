@@ -20,8 +20,9 @@ namespace ss {
         void despawn(int id);
         void set_name(int id, const char* name);
         long long query_ts(const int xc0, const int yc0, const int view_scale) const;
-        long long query_ts(const LWTTLCHUNKKEY chunk_key) const;
+        long long query_ts(const LWTTLCHUNKKEY& chunk_key) const;
         const char* query_single_cell(int xc0, int yc0, int& id) const;
+        void update_single_chunk_key_ts(const LWTTLCHUNKKEY& chunk_key, long long monotonic_uptime);
     private:
         std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         void update_chunk_key_ts(int xc0, int yc0);

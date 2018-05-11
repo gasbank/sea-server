@@ -17,7 +17,7 @@ namespace ss {
         int lng_to_xc(float lng) const;
         int lat_to_yc(float lat) const;
         long long query_ts(const int xc0, const int yc0, const int view_scale) const;
-        long long query_ts(const LWTTLCHUNKKEY chunk_key) const;
+        long long query_ts(const LWTTLCHUNKKEY& chunk_key) const;
         unsigned int query_single_cell(int xc0, int yc0) const;
     private:
         std::vector<sea_static_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;

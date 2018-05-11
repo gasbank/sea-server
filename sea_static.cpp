@@ -15,10 +15,6 @@
 
 using namespace ss;
 
-static long long get_monotonic_uptime() {
-    return std::chrono::steady_clock::now().time_since_epoch().count();
-}
-
 int sea_static::lng_to_xc(float lng) const {
     //return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
     return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2));
@@ -256,7 +252,7 @@ long long sea_static::query_ts(const int xc0, const int yc0, const int view_scal
     return query_ts(make_chunk_key(xc0, yc0, view_scale));
 }
 
-long long sea_static::query_ts(const LWTTLCHUNKKEY chunk_key) const {
+long long sea_static::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
     const auto cit = chunk_key_ts.find(chunk_key.v);
     if (cit != chunk_key_ts.cend()) {
         return cit->second;

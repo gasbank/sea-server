@@ -52,10 +52,6 @@ typedef struct _LWTTLDATA_CITY {
     float lat;
 } LWTTLDATA_CITY;
 
-static long long get_monotonic_uptime() {
-    return std::chrono::steady_clock::now().time_since_epoch().count();
-}
-
 city::city()
     : file(bi::open_or_create, CITY_RTREE_FILENAME, CITY_RTREE_MMAP_MAX_SIZE)
     , alloc(file.get_segment_manager())
@@ -256,7 +252,7 @@ long long city::query_ts(const int xc0, const int yc0, const int view_scale) con
     return query_ts(make_chunk_key(xc0, yc0, view_scale));
 }
 
-long long city::query_ts(const LWTTLCHUNKKEY chunk_key) const {
+long long city::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
     const auto cit = chunk_key_ts.find(chunk_key.v);
     if (cit != chunk_key_ts.cend()) {
         return cit->second;

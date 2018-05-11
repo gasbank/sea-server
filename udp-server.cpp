@@ -603,7 +603,15 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                       static_cast<int>(chunk_key.bf.view_scale_msb));
             } else if (p->static_object == 2) {
                 // seaports
-                const auto ts = seaport_->query_ts(chunk_key);
+                auto ts = seaport_->query_ts(chunk_key);
+                if (ts == 0) {
+                    // In this case, client requested 'first' query on 'empty' chunk
+                    // since server startup. We should update this chunk timestamp properly
+                    // to invalidate client cache data if needed.
+                    const auto monotonic_uptime = get_monotonic_uptime();
+                    seaport_->update_single_chunk_key_ts(chunk_key, monotonic_uptime);
+                    ts = monotonic_uptime;
+                }
                 if (ts > p->ts) {
                     send_seaport_cell_aligned(xc0_aligned, yc0_aligned, ex_lng, ex_lat, clamped_view_scale);
                     LOGIx("Seaports chunk key (%1%,%2%,%3%) Sent! (latest ts %4%)",

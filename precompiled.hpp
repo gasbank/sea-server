@@ -33,3 +33,7 @@
 #define WORLD_MAP_PIXEL_RESOLUTION_WIDTH (172824)
 #define WORLD_MAP_PIXEL_RESOLUTION_HEIGHT (86412)
 #define WORLD_CIRCUMFERENCE_IN_KM (40075.0f)
+
+static long long get_monotonic_uptime() {
+    return std::chrono::steady_clock::now().time_since_epoch().count();
+}
