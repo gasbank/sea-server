@@ -736,12 +736,21 @@ void udp_server::send_single_cell(int xc0, int yc0) {
     reply->xc0 = xc0;
     reply->yc0 = yc0;
     reply->attr = sea_static_->query_single_cell(xc0, yc0);
+    // seaport details
     int seaport_id = -1;
     auto seaport_name = seaport_->query_single_cell(xc0, yc0, seaport_id);
     reply->port_id = seaport_id;
     if (seaport_id >= 0 && seaport_name) {
         strncpy(reply->port_name, seaport_name, boost::size(reply->port_name));
         reply->port_name[boost::size(reply->port_name) - 1] = 0;
+    }
+    // city details
+    int city_id = -1;
+    auto city_name = city_->query_single_cell(xc0, yc0, city_id);
+    reply->city_id = city_id;
+    if (city_id >= 0 && city_name) {
+        strncpy(reply->city_name, city_name, boost::size(reply->city_name));
+        reply->city_name[boost::size(reply->city_name) - 1] = 0;
     }
     char compressed[1500];
     int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLSINGLECELL), static_cast<int>(boost::size(compressed)));

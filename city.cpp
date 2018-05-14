@@ -45,7 +45,7 @@ std::vector<city_object_public::value_t> city::query_tree_ex(int xc, int yc, int
 }
 
 typedef struct _LWTTLDATA_CITY {
-    char name[32]; // max length 25
+    char name[64]; // max length 35
     char country[4]; // country code; fixed length 2
     int population;
     float lng;

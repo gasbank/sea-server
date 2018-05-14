@@ -83,7 +83,8 @@ SET(ServerSources
         city.hpp
         city_object.cpp
         city_object.hpp
-        )
+        packet.h
+        cargo.cpp cargo.h)
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE(sea-server ${ServerSources} AStar.c AStar.h CohenSutherland.c CohenSutherland.h)
