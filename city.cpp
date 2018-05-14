@@ -1,11 +1,99 @@
 #include "precompiled.hpp"
 #include "city.hpp"
 #include "xy.hpp"
+#include "seaport.hpp"
 
 #define CITY_RTREE_FILENAME "rtree/city.dat"
 #define CITY_RTREE_MMAP_MAX_SIZE (4 * 1024 * 1024)
 
 using namespace ss;
+
+const auto update_interval = boost::posix_time::milliseconds(1000);
+
+typedef struct _LWTTLDATA_CITY {
+    char name[64]; // max length 35
+    char country[4]; // country code; fixed length 2
+    int population;
+    float lng;
+    float lat;
+} LWTTLDATA_CITY;
+
+city::city(boost::asio::io_service& io_service,
+           std::shared_ptr<seaport> seaport)
+    : file(bi::open_or_create, CITY_RTREE_FILENAME, CITY_RTREE_MMAP_MAX_SIZE)
+    , alloc(file.get_segment_manager())
+    , rtree_ptr(file.find_or_construct<city_object_public::rtree_t>("rtree")(city_object_public::params_t(), city_object_public::indexable_t(), city_object_public::equal_to_t(), alloc))
+    , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
+    , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
+    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
+    , timer_(io_service, update_interval)
+    , seaport_(seaport) {
+    boost::interprocess::file_mapping city_file("assets/ttldata/cities.dat", boost::interprocess::read_only);
+    boost::interprocess::mapped_region region(city_file, boost::interprocess::read_only);
+    LWTTLDATA_CITY* sp = reinterpret_cast<LWTTLDATA_CITY*>(region.get_address());
+    int count = static_cast<int>(region.get_size() / sizeof(LWTTLDATA_CITY));
+    // dump citys.dat into r-tree data if r-tree is empty.
+    if (rtree_ptr->size() == 0) {
+        LOGI("Dumping %1% cities...", count);
+        for (int i = 0; i < count; i++) {
+            city_object_public::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+            rtree_ptr->insert(std::make_pair(point, i));
+        }
+    }
+    for (int i = 0; i < count; i++) {
+        id_name[i] = sp[i].name;
+        id_population[i] = sp[i].population;
+        id_country[i] = sp[i].country;
+        name_id[sp[i].name] = i;
+        //id_point[i] = city_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+    }
+
+    const auto monotonic_uptime = get_monotonic_uptime();
+
+    std::set<std::pair<int, int> > point_set;
+    std::vector<city_object_public::value_t> duplicates;
+    const auto bounds = rtree_ptr->bounds();
+    for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
+        const auto xc0 = it->first.get<0>();
+        const auto yc0 = it->first.get<1>();
+        const auto point = std::make_pair(xc0, yc0);
+        if (point_set.find(point) == point_set.end()) {
+            id_point[it->second] = it->first;
+
+            update_chunk_key_ts(xc0, yc0);
+
+            point_set.insert(point);
+        } else {
+            duplicates.push_back(*it);
+        }
+    }
+    for (const auto it : duplicates) {
+        rtree_ptr->remove(it);
+    }
+    if (point_set.size() != rtree_ptr->size()) {
+        LOGE("city rtree integrity check failure. Point set size %1% != R tree size %2%",
+             point_set.size(),
+             rtree_ptr->size());
+        abort();
+    }
+
+    // TESTING-----------------
+    int i = count;
+    city_object_public::point_t origin_port{ 0,0 };
+    std::vector<city_object_public::value_t> to_be_removed;
+    rtree_ptr->query(bgi::intersects(city_object_public::box_t{ { -32,-32 },{ 32,32 } }), std::back_inserter(to_be_removed));
+    for (auto e : to_be_removed) {
+        rtree_ptr->remove(e);
+    }
+    rtree_ptr->insert(std::make_pair(origin_port, i));
+    id_name[i] = "Origin Port";
+    name_id["Origin Port"] = i;
+    id_point[i] = origin_port;
+    count++;
+    // TESTING-----------------
+
+    timer_.async_wait(boost::bind(&city::update, this));
+}
 
 int city::lng_to_xc(float lng) const {
     //return static_cast<int>(roundf(res_width / 2 + lng / 180.0f * res_width / 2)) & (res_width - 1);
@@ -42,87 +130,6 @@ std::vector<city_object_public::value_t> city::query_tree_ex(int xc, int yc, int
     std::vector<city_object_public::value_t> result_s;
     rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     return result_s;
-}
-
-typedef struct _LWTTLDATA_CITY {
-    char name[64]; // max length 35
-    char country[4]; // country code; fixed length 2
-    int population;
-    float lng;
-    float lat;
-} LWTTLDATA_CITY;
-
-city::city()
-    : file(bi::open_or_create, CITY_RTREE_FILENAME, CITY_RTREE_MMAP_MAX_SIZE)
-    , alloc(file.get_segment_manager())
-    , rtree_ptr(file.find_or_construct<city_object_public::rtree_t>("rtree")(city_object_public::params_t(), city_object_public::indexable_t(), city_object_public::equal_to_t(), alloc))
-    , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
-    , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
-    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
-{
-    boost::interprocess::file_mapping city_file("assets/ttldata/cities.dat", boost::interprocess::read_only);
-    boost::interprocess::mapped_region region(city_file, boost::interprocess::read_only);
-    LWTTLDATA_CITY* sp = reinterpret_cast<LWTTLDATA_CITY*>(region.get_address());
-    int count = static_cast<int>(region.get_size() / sizeof(LWTTLDATA_CITY));
-    // dump citys.dat into r-tree data if r-tree is empty.
-    if (rtree_ptr->size() == 0) {
-        LOGI("Dumping %1% cities...", count);
-        for (int i = 0; i < count; i++) {
-            city_object_public::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
-            rtree_ptr->insert(std::make_pair(point, i));
-        }
-    }
-    for (int i = 0; i < count; i++) {
-        id_name[i] = sp[i].name;
-        id_population[i] = sp[i].population;
-        id_country[i] = sp[i].country;
-        name_id[sp[i].name] = i;
-        //id_point[i] = city_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
-    }
-
-    const auto monotonic_uptime = get_monotonic_uptime();
-
-    std::set<std::pair<int,int> > point_set;
-    std::vector<city_object_public::value_t> duplicates;
-    const auto bounds = rtree_ptr->bounds();
-    for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
-        const auto xc0 = it->first.get<0>();
-        const auto yc0 = it->first.get<1>();
-        const auto point = std::make_pair(xc0, yc0);
-        if (point_set.find(point) == point_set.end()) {
-            id_point[it->second] = it->first;
-
-            update_chunk_key_ts(xc0, yc0);
-            
-            point_set.insert(point);
-        } else {
-            duplicates.push_back(*it);
-        }
-    }
-    for (const auto it : duplicates) {
-        rtree_ptr->remove(it);
-    }
-    if (point_set.size() != rtree_ptr->size()) {
-        LOGE("city rtree integrity check failure. Point set size %1% != R tree size %2%",
-             point_set.size(),
-             rtree_ptr->size());
-        abort();
-    }
-
-    // TESTING-----------------
-    int i = count;
-    city_object_public::point_t origin_port{ 0,0 };
-    std::vector<city_object_public::value_t> to_be_removed;
-    rtree_ptr->query(bgi::intersects(city_object_public::box_t{ {-32,-32},{32,32} }), std::back_inserter(to_be_removed));
-    for (auto e : to_be_removed) {
-        rtree_ptr->remove(e);
-    }
-    rtree_ptr->insert(std::make_pair(origin_port, i));
-    id_name[i] = "Origin Port";
-    name_id["Origin Port"] = i;
-    id_point[i] = origin_port;
-    count++;
-    // TESTING-----------------
 }
 
 const char* city::get_city_name(int id) const {
@@ -268,4 +275,20 @@ const char* city::query_single_cell(int xc0, int yc0, int& id) const {
     }
     id = -1;
     return nullptr;
+}
+
+void city::update() {
+    float delta_time = update_interval.total_milliseconds() / 1000.0f;
+
+    timer_.expires_at(timer_.expires_at() + update_interval);
+    timer_.async_wait(boost::bind(&city::update, this));
+
+    const auto bounds = rtree_ptr->bounds();
+    for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
+        const auto xc = it->first.get<0>();
+        const auto yc = it->first.get<1>();
+        for (const auto sop : seaport_->query_near_to_packet(xc, yc, 10.0f, 10.0f)) {
+            seaport_->add_cargo(sop.id, 1);
+        }
+    }
 }

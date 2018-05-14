@@ -21,8 +21,10 @@ namespace ss {
         void set_name(int id, const char* name);
         long long query_ts(const int xc0, const int yc0, const int view_scale) const;
         long long query_ts(const LWTTLCHUNKKEY& chunk_key) const;
-        const char* query_single_cell(int xc0, int yc0, int& id) const;
+        const char* query_single_cell(int xc0, int yc0, int& id, int& cargo) const;
         void update_single_chunk_key_ts(const LWTTLCHUNKKEY& chunk_key, long long monotonic_uptime);
+        int add_cargo(int id, int amount);
+        int remove_cargo(int id, int amount);
     private:
         std::vector<seaport_object_public::value_t> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         void update_chunk_key_ts(int xc0, int yc0);
@@ -36,5 +38,6 @@ namespace ss {
         std::unordered_map<int, seaport_object_public::point_t> id_point; // seaport ID -> seaport position
         std::unordered_map<std::string, int> name_id; // seaport name -> seaport ID (XXX NOT UNIQUE XXX)
         std::unordered_map<int, long long> chunk_key_ts; // chunk key -> timestamp
+        std::unordered_map<int, int> id_cargo; // seaport ID -> cargo count
     };
 }

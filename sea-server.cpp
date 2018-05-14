@@ -32,12 +32,13 @@ int main() {
 
         LOGI("Current path: %s", boost::filesystem::current_path());
         boost::asio::io_service io_service;
-        std::shared_ptr<sea> sea_instance(new sea());
+        std::shared_ptr<sea> sea_instance(new sea(io_service));
         sea_instance->populate_test();
         std::shared_ptr<sea_static> sea_static_instance(new sea_static());
         std::shared_ptr<seaport> seaport_instance(new seaport());
         std::shared_ptr<region> region_instance(new region());
-        std::shared_ptr<city> city_instance(new city());
+        std::shared_ptr<city> city_instance(new city(io_service,
+                                                     seaport_instance));
         udp_server udp_server_instance(io_service,
                                        sea_instance,
                                        sea_static_instance,

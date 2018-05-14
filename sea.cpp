@@ -2,10 +2,12 @@
 #include "sea.hpp"
 #include "route.hpp"
 #include "udp-admin-server.hpp"
+#include "seaport.hpp"
 using namespace ss;
 
-sea::sea()
-    : res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
+sea::sea(boost::asio::io_service& io_service)
+    : io_service(io_service)
+    , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
     , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
     , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width) {
 }
@@ -231,7 +233,7 @@ void sea::update(float delta_time) {
     }
 }
 
-bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
+bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::shared_ptr<seaport> sp) {
     if (!r) {
         // nothing to do
         return true;
@@ -251,13 +253,70 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r) {
             teleport_to(id, pos.first.first, pos.first.second, 0, 0);
         }
     }
-    if (finished) {
+    if (finished && state == SOS_SAILING) {
+        // ship docked at seaport2
+        // start unloading...
         auto obj = get_object(id);
-        obj->set_state(SOS_LOADING);
         obj->set_velocity(0, 0);
-        obj->set_remain_loading_time(5.0f);
-        uas->send_arrival(obj->get_type());
-        r->reverse();
+        obj->set_state(SOS_UNLOADING);
+        std::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(io_service, boost::posix_time::milliseconds(5000)));
+        t->async_wait([this, id, t, sp, r](const boost::system::error_code& error) {
+            if (!error) {
+                auto obj = get_object(id);
+                if (obj == nullptr) {
+                    LOGE("Cannot find sea object with ID %d", id);
+                    return;
+                }
+                obj->remove_cargo(MAX_CARGO);
+                obj->set_state(SOS_LOADING);
+                std::shared_ptr<boost::asio::deadline_timer> t2(new boost::asio::deadline_timer(io_service, boost::posix_time::milliseconds(5000)));
+                t2->async_wait([this, id, t2, sp, r](const boost::system::error_code& error) {
+                    if (!error) {
+                        auto obj = get_object(id);
+                        if (obj == nullptr) {
+                            LOGE("Cannot find sea object with ID %d", id);
+                            return;
+                        }
+                        const auto removed_cargo = sp->remove_cargo(r->get_seaport2_id(), 10);
+                        obj->add_cargo(removed_cargo);
+                        uas->send_arrival(obj->get_type());
+                        // reversing the route
+                        r->reverse();
+                        // sail again
+                        obj->set_state(SOS_SAILING);
+                    } else {
+                        LOGE(error.message());
+                    }
+                });
+            } else {
+                LOGE(error.message());
+            }
+        });
+        //auto obj = get_object(id);
+        //obj->set_state(SOS_LOADING);
+        //const auto removed_cargo = sp->remove_cargo(r->get_seaport2_id(), 10);
+        //obj->add_cargo(removed_cargo);
+        //obj->set_velocity(0, 0);
+        //obj->set_remain_loading_time(5.0f);
+        //uas->send_arrival(obj->get_type());
+        //// reversing the route
+        //r->reverse();
     }
     return true;
+}
+
+int sea::add_cargo(int id, int amount) {
+    auto obj = get_object(id);
+    if (obj) {
+        return obj->add_cargo(amount);
+    }
+    return 0;
+}
+
+int sea::remove_cargo(int id, int amount) {
+    auto obj = get_object(id);
+    if (obj) {
+        return obj->remove_cargo(amount);
+    }
+    return 0;
 }

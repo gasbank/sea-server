@@ -92,20 +92,18 @@ namespace ss {
         const value& get_rtree_value() const { return rtree_value; }
         void set_state(SEA_OBJECT_STATE state) { this->state = state; }
         SEA_OBJECT_STATE get_state() const { return state; }
+        void set_remain_unloading_time(float remain_unloading_time) {
+            this->remain_unloading_time = remain_unloading_time;
+        }
         void set_remain_loading_time(float remain_loading_time) {
             this->remain_loading_time = remain_loading_time;
         }
-        void update(float delta_time) {
-            if (remain_loading_time > 0) {
-                remain_loading_time -= delta_time;
-                if (remain_loading_time <= 0) {
-                    remain_loading_time = 0;
-                    state = SOS_SAILING;
-                }
-            }
-        }
+        void update(float delta_time);
         int get_type() const { return type; }
         int get_id() const { return id; }
+        int add_cargo(int amount);
+        int remove_cargo(int amount);
+        int get_cargo() const { return cargo; }
     private:
         explicit sea_object() {}
         int id;
@@ -117,7 +115,8 @@ namespace ss {
         std::string guid;
         value rtree_value;
         SEA_OBJECT_STATE state;
+        float remain_unloading_time;
         float remain_loading_time;
-        std::vector<container> containers;
+        int cargo;
     };
 }

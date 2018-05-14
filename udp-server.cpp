@@ -28,64 +28,8 @@ udp_server::udp_server(boost::asio::io_service & io_service,
     , region_(region)
     , city_(city)
     , tick_seq_(0) {
-
-    //make_test_route();
-
     start_receive();
     timer_.async_wait(boost::bind(&udp_server::update, this));
-}
-
-void udp_server::make_test_route() {
-    auto spawn_point = seaport_->get_seaport_point("Busan");
-    auto spawn_point_x = static_cast<float>(spawn_point.get<0>());
-    auto spawn_point_y = static_cast<float>(spawn_point.get<1>());
-    auto id1 = sea_->spawn("Test A", 1, spawn_point_x, spawn_point_y, 1, 1);
-    auto id2 = sea_->spawn("Test B", 2, spawn_point_x, spawn_point_y, 1, 1);
-    auto id3 = sea_->spawn("Test C", 3, spawn_point_x, spawn_point_y, 1, 1);
-    auto id4 = sea_->spawn("Test D", 4, spawn_point_x, spawn_point_y, 1, 1);
-    auto id5 = sea_->spawn("Test E", 5, spawn_point_x, spawn_point_y, 1, 1);
-    auto id6 = sea_->spawn("Test F", 6, spawn_point_x, spawn_point_y, 1, 1);
-    auto id7 = sea_->spawn("Test G", 7, spawn_point_x, spawn_point_y, 1, 1);
-    auto id8 = sea_->spawn("Test H", 8, spawn_point_x, spawn_point_y, 1, 1);
-
-    route_map_[id1] = create_route({
-        "Onsan/Ulsan",
-        "Busan",
-        "Busan New Port",
-        "Anjeong",
-        "Tongyeong" });
-
-    route_map_[id2] = create_route({
-        "Busan",
-        "South Busan" });
-
-    route_map_[id3] = create_route({
-        "Tongyeong",
-        "Samcheonpo/Sacheon" });
-
-    route_map_[id4] = create_route({
-        "Gwangyang",
-        "Yeosu" });
-
-    route_map_[id5] = create_route({
-        "Yokohama",
-        "Nokdongsin" });
-
-    // Too slow in 'Debug' mode...
-    //route_map_[id6] = create_route({
-    //    "Onsan/Ulsan",
-    //    "Yokohama" });
-
-    // Too slow even in 'Release' mode...
-    //route_map_[id7] = create_route({
-    //    "Pilottown",
-    //    "Yokohama" });
-
-    //route_map_[id8] = create_route({
-    //    "Yokohama",
-    //    "Jurong/Singapore" });
-
-    LOGI("Route setup completed.");
 }
 
 bool udp_server::set_route(int id, int seaport_id1, int seaport_id2) {
@@ -107,7 +51,7 @@ void udp_server::update() {
     sea_->update(delta_time);
     std::vector<int> remove_keys;
     for (auto v : route_map_) {
-        if (sea_->update_route(delta_time, v.first, v.second) == false) {
+        if (sea_->update_route(delta_time, v.first, v.second, seaport_) == false) {
             // no more valid 'v'
             remove_keys.push_back(v.first);
         }
@@ -681,31 +625,7 @@ std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seapo
             return std::shared_ptr<route>();
         }
     }
-    std::shared_ptr<route> r(new route(wp_total));
-    r->set_velocity(1);
-    return r;
-}
-
-std::shared_ptr<route> udp_server::create_route(const std::vector<std::string>& seaport_list) const {
-    if (seaport_list.size() == 0) {
-        return std::shared_ptr<route>();
-    }
-    std::vector<seaport_object_public::point_t> point_list;
-    for (auto v : seaport_list) {
-        point_list.emplace_back(seaport_->get_seaport_point(v.c_str()));
-        LOGI("Seaport: %1%", v);
-    }
-    std::vector<xy32> wp_total;
-    for (size_t i = 0; i < point_list.size() - 1; i++) {
-        auto wp = sea_static_->calculate_waypoints(point_list[i], point_list[i + 1]);
-        if (wp.size() >= 2) {
-            std::copy(wp.begin(), wp.end(), std::back_inserter(wp_total));
-        } else {
-            LOGE("Waypoints of less than 2 detected. Route could not be found.");
-            return std::shared_ptr<route>();
-        }
-    }
-    std::shared_ptr<route> r(new route(wp_total));
+    std::shared_ptr<route> r(new route(wp_total, seaport_id_list[0], seaport_id_list[1]));
     r->set_velocity(1);
     return r;
 }
@@ -738,8 +658,10 @@ void udp_server::send_single_cell(int xc0, int yc0) {
     reply->attr = sea_static_->query_single_cell(xc0, yc0);
     // seaport details
     int seaport_id = -1;
-    auto seaport_name = seaport_->query_single_cell(xc0, yc0, seaport_id);
+    int seaport_cargo = 0;
+    auto seaport_name = seaport_->query_single_cell(xc0, yc0, seaport_id, seaport_cargo);
     reply->port_id = seaport_id;
+    reply->cargo = seaport_cargo;
     if (seaport_id >= 0 && seaport_name) {
         strncpy(reply->port_name, seaport_name, boost::size(reply->port_name));
         reply->port_name[boost::size(reply->port_name) - 1] = 0;

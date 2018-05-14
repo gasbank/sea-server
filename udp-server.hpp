@@ -22,7 +22,6 @@ namespace ss {
                    std::shared_ptr<city> city);
         bool set_route(int id, int seaport_id1, int seaport_id2);
     private:
-        void make_test_route();
         void update();
         void start_receive();
         void send_full_state(float lng, float lat, float ex_lng, float ex_lat, int view_scale);
@@ -48,7 +47,6 @@ namespace ss {
                          std::size_t bytes_transferred);
 
         std::shared_ptr<route> create_route_id(const std::vector<int>& seaport_id_list) const;
-        std::shared_ptr<route> create_route(const std::vector<std::string>& seaport_list) const;
 
         udp::socket socket_;
         udp::endpoint remote_endpoint_;

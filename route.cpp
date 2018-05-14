@@ -8,10 +8,12 @@ float distance_xy(const xy32& a, const xy32& b) {
     return sqrtf(static_cast<float>((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)));
 }
 
-route::route(const std::vector<xy32>& waypoints)
+route::route(const std::vector<xy32>& waypoints, int seaport1_id, int seaport2_id)
     : waypoints(waypoints)
     , velocity(0)
-    , param(0) {
+    , param(0)
+    , seaport1_id(seaport1_id)
+    , seaport2_id(seaport2_id) {
     if (waypoints.size() == 0) {
         LOGE("route created with empty waypoints...");
     } else {
@@ -77,6 +79,7 @@ void route::reverse() {
     }
     std::reverse(accum_distance.begin(), accum_distance.end());
     param = total_length - param;
+    std::swap(seaport1_id, seaport2_id);
 }
 
 std::vector<xy32> route::clone_waypoints() const {

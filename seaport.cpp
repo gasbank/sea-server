@@ -258,12 +258,51 @@ long long seaport::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
     return 0;
 }
 
-const char* seaport::query_single_cell(int xc0, int yc0, int& id) const {
+const char* seaport::query_single_cell(int xc0, int yc0, int& id, int& cargo) const {
     const auto seaport_it = rtree_ptr->qbegin(bgi::intersects(seaport_object_public::point_t{ xc0, yc0 }));
     if (seaport_it != rtree_ptr->qend()) {
         id = seaport_it->second;
+        const auto cargo_it = id_cargo.find(id);
+        if (cargo_it != id_cargo.end()) {
+            cargo = cargo_it->second;
+        } else {
+            cargo = 0;
+        }
         return get_seaport_name(seaport_it->second);
     }
     id = -1;
+    cargo = 0;
     return nullptr;
+}
+
+int seaport::add_cargo(int id, int amount) {
+    if (amount < 0) {
+        amount = 0;
+    }
+    if (amount > MAX_CARGO) {
+        amount = MAX_CARGO;
+    }
+    const auto before = id_cargo[id];
+    auto after = before + amount;
+    if (after > MAX_CARGO) {
+        after = MAX_CARGO;
+    }
+    id_cargo[id] = after;
+    return after - before;
+}
+
+int seaport::remove_cargo(int id, int amount) {
+    if (amount < 0) {
+        amount = 0;
+    }
+    if (amount > MAX_CARGO) {
+        amount = MAX_CARGO;
+    }
+    const auto before = id_cargo[id];
+    auto after = before - amount;
+    if (after < 0) {
+        after = 0;
+    }
+    id_cargo[id] = after;
+    return before - after;
 }

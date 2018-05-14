@@ -37,3 +37,4 @@
 static long long get_monotonic_uptime() {
     return std::chrono::steady_clock::now().time_since_epoch().count();
 }
+const static int MAX_CARGO = 1000000;
