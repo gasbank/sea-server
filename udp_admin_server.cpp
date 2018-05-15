@@ -6,22 +6,9 @@
 #include "xy.hpp"
 #include "seaport.hpp"
 #include "udp_server.hpp"
+#include "packet.h"
+
 using namespace ss;
-
-typedef struct _LWPTTLFULLSTATEOBJECT {
-    float x0, y0;
-    float x1, y1;
-    int id;
-} LWPTTLFULLSTATEOBJECT;
-
-typedef struct _LWPTTLFULLSTATE {
-    unsigned char type;
-    unsigned char padding0;
-    unsigned char padding1;
-    unsigned char padding2;
-    int count;
-    LWPTTLFULLSTATEOBJECT obj[64];
-} LWPTTLFULLSTATE;
 
 static std::string make_daytime_string() {
     using namespace std; // For time_t, time and ctime;

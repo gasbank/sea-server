@@ -79,30 +79,21 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
 }
 
 void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
-    std::vector<sea_object_pod> sop_list;
+    std::vector<sea_object> sop_list;
     sea_->query_near_lng_lat_to_packet(lng, lat, ex_lng * view_scale, ex_lat * view_scale, sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
     size_t reply_obj_index = 0;
-    for (sea_object_pod const& v : sop_list) {
-        reply->obj[reply_obj_index].fx0 = v.fx;
-        reply->obj[reply_obj_index].fy0 = v.fy;
-        reply->obj[reply_obj_index].fx1 = v.fx + v.fw;
-        reply->obj[reply_obj_index].fy1 = v.fy + v.fh;
-        reply->obj[reply_obj_index].fvx = v.fvx;
-        reply->obj[reply_obj_index].fvy = v.fvy;
-        reply->obj[reply_obj_index].id = v.id;
-        reply->obj[reply_obj_index].type = v.type;
-        strcpy(reply->obj[reply_obj_index].guid, v.guid);
-        auto it = route_map_.find(v.id);
+    for (sea_object const& v : sop_list) {
+        v.fill_packet(reply->obj[reply_obj_index]);
+        auto it = route_map_.find(v.get_id());
         if (it != route_map_.end() && it->second) {
             reply->obj[reply_obj_index].route_left = it->second->get_left();
         } else {
             reply->obj[reply_obj_index].route_left = 0;
         }
-
         reply_obj_index++;
         if (reply_obj_index >= boost::size(reply->obj)) {
             break;

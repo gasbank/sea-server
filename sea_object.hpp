@@ -1,13 +1,16 @@
 #pragma once
 
 #include "container.hpp"
-#include "sea_object_pod.hpp"
+#include "sea_object.hpp"
+
+typedef struct _LWPTTLFULLSTATEOBJECT LWPTTLFULLSTATEOBJECT;
 
 namespace ss {
     namespace bg = boost::geometry;
     namespace bgi = boost::geometry::index;
 
     enum SEA_OBJECT_STATE {
+        SOS_NOT_SET,
         SOS_SAILING,
         SOS_LOADING,
         SOS_UNLOADING,
@@ -32,21 +35,20 @@ namespace ss {
             state(SOS_SAILING),
             remain_loading_time(0) {
         }
-        void fill_sop(sea_object_pod& sop) const {
-            sop.fx = fx;
-            sop.fy = fy;
-            sop.fw = fw;
-            sop.fh = fh;
-            sop.fvx = fvx;
-            sop.fvy = fvy;
-            sop.id = id;
-            sop.type = type;
-            strcpy(sop.guid, guid.c_str());
-            if (state == SOS_LOADING) {
-                strcat(sop.guid, "[LOADING]");
-            } else if (state == SOS_UNLOADING) {
-                strcat(sop.guid, "[UNLOADING]");
-            }
+        explicit sea_object()
+            : id(0),
+            type(0),
+            fx(0),
+            fy(0),
+            fw(0),
+            fh(0),
+            fvx(0),
+            fvy(0),
+            state(SOS_NOT_SET),
+            remain_loading_time(0) {
+        }
+        void fill_sop(sea_object& sop) const {
+            sop = *this;
         }
         void set_guid(const std::string& v) {
             guid = v;
@@ -96,8 +98,8 @@ namespace ss {
         int add_cargo(int amount);
         int remove_cargo(int amount);
         int get_cargo() const { return cargo; }
+        void fill_packet(LWPTTLFULLSTATEOBJECT& p) const;
     private:
-        explicit sea_object() {}
         int id;
         int type;
         float fx, fy;

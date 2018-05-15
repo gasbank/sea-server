@@ -1,5 +1,6 @@
 #include "precompiled.hpp"
 #include "sea_object.hpp"
+#include "packet.h"
 
 using namespace ss;
 
@@ -52,4 +53,21 @@ int sea_object::remove_cargo(int amount) {
     }
     cargo = after;
     return before - after;
+}
+
+void sea_object::fill_packet(LWPTTLFULLSTATEOBJECT& p) const {
+    p.fx0 = fx;
+    p.fy0 = fy;
+    p.fx1 = fx + fw;
+    p.fy1 = fy + fh;
+    p.fvx = fvx;
+    p.fvy = fvy;
+    p.id = id;
+    p.type = type;
+    strcpy(p.guid, guid.c_str());
+    if (state == SOS_LOADING) {
+        strcat(p.guid, "[LOADING]");
+    } else if (state == SOS_UNLOADING) {
+        strcat(p.guid, "[UNLOADING]");
+    }
 }

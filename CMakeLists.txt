@@ -66,7 +66,6 @@ SET(ServerSources
         sea_static_object.hpp
         seaport_object.cpp
         seaport_object.hpp
-		seaport_object_pod.hpp
         seaport.cpp
         seaport.hpp
         astarrtree.cpp
