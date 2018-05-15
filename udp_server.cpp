@@ -79,14 +79,14 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
 }
 
 void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
-    std::vector<sea_object_public> sop_list;
+    std::vector<sea_object_pod> sop_list;
     sea_->query_near_lng_lat_to_packet(lng, lat, ex_lng * view_scale, ex_lat * view_scale, sop_list);
 
     boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
     size_t reply_obj_index = 0;
-    for (sea_object_public const& v : sop_list) {
+    for (sea_object_pod const& v : sop_list) {
         reply->obj[reply_obj_index].fx0 = v.fx;
         reply->obj[reply_obj_index].fy0 = v.fy;
         reply->obj[reply_obj_index].fx1 = v.fx + v.fw;
@@ -410,7 +410,7 @@ void udp_server::send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, flo
     reply->view_scale = view_scale;
     size_t reply_obj_index = 0;
     const int view_scale_msb_index = msb_index(view_scale);
-    for (seaport_object_public const& v : sop_list) {
+    for (seaport_object const& v : sop_list) {
         reply->obj[reply_obj_index].x_scaled_offset_0 = aligned_scaled_offset(v.x0, xc0_aligned, view_scale, view_scale_msb_index, false, 0, 0);
         reply->obj[reply_obj_index].y_scaled_offset_0 = aligned_scaled_offset(v.y0, yc0_aligned, view_scale, view_scale_msb_index, false, 0, 0);
         if (view_scale < 16) {
@@ -610,7 +610,7 @@ std::shared_ptr<route> udp_server::create_route_id(const std::vector<int>& seapo
     if (seaport_id_list.size() == 0) {
         return std::shared_ptr<route>();
     }
-    std::vector<seaport_object_public::point_t> point_list;
+    std::vector<seaport_object::point> point_list;
     for (auto v : seaport_id_list) {
         point_list.emplace_back(seaport_->get_seaport_point(v));
         LOGI("Seaport ID: %1% (%2%)", v, seaport_->get_seaport_name(v));

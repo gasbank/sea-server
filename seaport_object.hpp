@@ -6,20 +6,20 @@ namespace ss {
     namespace bgm = boost::geometry::model;
     namespace bgi = boost::geometry::index;
 
-    struct seaport_object_public {
-        typedef bgm::point<int, 2, bg::cs::cartesian> point_t;
-        typedef bgm::box<point_t> box_t; // only for query
-        typedef std::pair<point_t, int> value_t;
-        typedef bgi::linear<32, 8> params_t;
-        typedef bgi::indexable<value_t> indexable_t;
-        typedef bgi::equal_to<value_t> equal_to_t;
-        typedef bi::allocator<value_t, bi::managed_mapped_file::segment_manager> allocator_t;
-        typedef bgi::rtree<value_t, params_t, indexable_t, equal_to_t, allocator_t> rtree_t;
+    struct seaport_object {
+        typedef bgm::point<int, 2, bg::cs::cartesian> point;
+        typedef bgm::box<point> box; // only for query
+        typedef std::pair<point, int> value;
+        typedef bgi::linear<32, 8> params;
+        typedef bgi::indexable<value> indexable;
+        typedef bgi::equal_to<value> equal_to;
+        typedef bi::allocator<value, bi::managed_mapped_file::segment_manager> allocator;
+        typedef bgi::rtree<value, params, indexable, equal_to, allocator> rtree;
 
         int x0, y0;
         int id;
 
-        seaport_object_public(const value_t& v)
+        seaport_object(const value& v)
             : x0(v.first.get<0>())
             , y0(v.first.get<1>())
             , id(v.second) {

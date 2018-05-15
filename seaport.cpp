@@ -17,27 +17,27 @@ int seaport::lat_to_yc(float lat) const {
     return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
 }
 
-//std::vector<seaport_object_public> seaport::query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const {
+//std::vector<seaport_object> seaport::query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const {
 //    return query_near_to_packet(lng_to_xc(lng),
 //                                lat_to_yc(lat),
 //                                half_lng_ex,
 //                                half_lat_ex);
 //}
 
-std::vector<seaport_object_public> seaport::query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const {
+std::vector<seaport_object> seaport::query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const {
     const auto half_lng_ex = boost::math::iround(ex_lng / 2);
     const auto half_lat_ex = boost::math::iround(ex_lat / 2);
     auto values = query_tree_ex(xc, yc, half_lng_ex, half_lat_ex);
-    std::vector<seaport_object_public> sop_list;
+    std::vector<seaport_object> sop_list;
     for (std::size_t i = 0; i < values.size(); i++) {
-        sop_list.emplace_back(seaport_object_public(values[i]));
+        sop_list.emplace_back(seaport_object(values[i]));
     }
     return sop_list;
 }
 
-std::vector<seaport_object_public::value_t> seaport::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
-    seaport_object_public::box_t query_box(seaport_object_public::point_t(xc - half_lng_ex, yc - half_lat_ex), seaport_object_public::point_t(xc + half_lng_ex, yc + half_lat_ex));
-    std::vector<seaport_object_public::value_t> result_s;
+std::vector<seaport_object::value> seaport::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
+    seaport_object::box query_box(seaport_object::point(xc - half_lng_ex, yc - half_lat_ex), seaport_object::point(xc + half_lng_ex, yc + half_lat_ex));
+    std::vector<seaport_object::value> result_s;
     rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     return result_s;
 }
@@ -52,7 +52,7 @@ typedef struct _LWTTLDATA_SEAPORT {
 seaport::seaport()
     : file(bi::open_or_create, SEAPORT_RTREE_FILENAME, SEAPORT_RTREE_MMAP_MAX_SIZE)
     , alloc(file.get_segment_manager())
-    , rtree_ptr(file.find_or_construct<seaport_object_public::rtree_t>("rtree")(seaport_object_public::params_t(), seaport_object_public::indexable_t(), seaport_object_public::equal_to_t(), alloc))
+    , rtree_ptr(file.find_or_construct<seaport_object::rtree>("rtree")(seaport_object::params(), seaport_object::indexable(), seaport_object::equal_to(), alloc))
     , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
     , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
     , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
@@ -64,20 +64,20 @@ seaport::seaport()
     // dump seaports.dat into r-tree data if r-tree is empty.
     if (rtree_ptr->size() == 0) {
         /*for (int i = 0; i < count; i++) {
-            seaport_object_public::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+            seaport_object::point point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
             rtree_ptr->insert(std::make_pair(point, i));
         }*/
     }
     for (int i = 0; i < count; i++) {
         id_name[i] = sp[i].name;
         name_id[sp[i].name] = i;
-        //id_point[i] = seaport_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+        //id_point[i] = seaport_object::point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
 
     const auto monotonic_uptime = get_monotonic_uptime();
 
     std::set<std::pair<int,int> > point_set;
-    std::vector<seaport_object_public::value_t> duplicates;
+    std::vector<seaport_object::value> duplicates;
     const auto bounds = rtree_ptr->bounds();
     for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
         const auto xc0 = it->first.get<0>();
@@ -105,9 +105,9 @@ seaport::seaport()
 
     // TESTING-----------------
     int i = count;
-    seaport_object_public::point_t origin_port{ 0,0 };
-    std::vector<seaport_object_public::value_t> to_be_removed;
-    rtree_ptr->query(bgi::intersects(seaport_object_public::box_t{ {-32,-32},{32,32} }), std::back_inserter(to_be_removed));
+    seaport_object::point origin_port{ 0,0 };
+    std::vector<seaport_object::value> to_be_removed;
+    rtree_ptr->query(bgi::intersects(seaport_object::box{ {-32,-32},{32,32} }), std::back_inserter(to_be_removed));
     for (auto e : to_be_removed) {
         rtree_ptr->remove(e);
     }
@@ -135,17 +135,17 @@ int seaport::get_seaport_id(const char* name) const {
     return -1;
 }
 
-seaport_object_public::point_t seaport::get_seaport_point(int id) const {
+seaport_object::point seaport::get_seaport_point(int id) const {
     if (id >= 0) {
         auto cit = id_point.find(id);
         if (cit != id_point.end()) {
             return cit->second;
         }
     }
-    return seaport_object_public::point_t(-1, -1);
+    return seaport_object::point(-1, -1);
 }
 
-seaport_object_public::point_t seaport::get_seaport_point(const char* name) const {
+seaport_object::point seaport::get_seaport_point(const char* name) const {
     auto id = get_seaport_id(name);
     return get_seaport_point(id);
 }
@@ -153,7 +153,7 @@ seaport_object_public::point_t seaport::get_seaport_point(const char* name) cons
 int seaport::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int& id2, std::string& name2) const {
     id1 = -1;
     id2 = -1;
-    seaport_object_public::point_t p = { boost::numeric_cast<int>(pos.x), boost::numeric_cast<int>(pos.y) };
+    seaport_object::point p = { boost::numeric_cast<int>(pos.x), boost::numeric_cast<int>(pos.y) };
     int count = 0;
     for (auto it = rtree_ptr->qbegin(bgi::nearest(p, 2)); it != rtree_ptr->qend(); it++) {
         if (count == 0) {
@@ -194,7 +194,7 @@ void seaport::update_single_chunk_key_ts(const LWTTLCHUNKKEY& chunk_key, long lo
 }
 
 int seaport::spawn(const char* name, int xc0, int yc0) {
-    seaport_object_public::point_t new_port_point{ xc0, yc0 };
+    seaport_object::point new_port_point{ xc0, yc0 };
     if (rtree_ptr->qbegin(bgi::intersects(new_port_point)) != rtree_ptr->qend()) {
         // already exists
         return -1;
@@ -259,7 +259,7 @@ long long seaport::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
 }
 
 const char* seaport::query_single_cell(int xc0, int yc0, int& id, int& cargo) const {
-    const auto seaport_it = rtree_ptr->qbegin(bgi::intersects(seaport_object_public::point_t{ xc0, yc0 }));
+    const auto seaport_it = rtree_ptr->qbegin(bgi::intersects(seaport_object::point{ xc0, yc0 }));
     if (seaport_it != rtree_ptr->qend()) {
         id = seaport_it->second;
         const auto cargo_it = id_cargo.find(id);

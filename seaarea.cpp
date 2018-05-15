@@ -26,8 +26,8 @@ bool seaarea::query_tree(float lng, float lat, std::string& name) const {
     return query_rtree(seaarea_rtree, seaarea_entries, lng, lat, name);
 }
 
-bool seaarea::query_rtree(rtree_t* rtree, const std::vector<seaarea_entry>& entries, float lng, float lat, std::string& name) {
-    point_t query_point(lng, lat);
+bool seaarea::query_rtree(rtree* rtree, const std::vector<seaarea_entry>& entries, float lng, float lat, std::string& name) {
+    point query_point(lng, lat);
     for (auto q = rtree->qbegin(bgi::contains(query_point)); q != rtree->qend(); q++) {
         const auto& ent = entries[q->second];
         if (contains_point_in_polygon(ent, lng, lat) == 1) {
@@ -45,7 +45,7 @@ typedef struct _LWTTLDATA_SEAAREA {
     int points;
 } LWTTLDATA_SEAAREA;
 
-void seaarea::init_area_data(boost::interprocess::mapped_region& region, std::vector<seaarea_entry>& entries, rtree_t* rtree) {
+void seaarea::init_area_data(boost::interprocess::mapped_region& region, std::vector<seaarea_entry>& entries, rtree* rtree) {
     LWTTLDATA_SEAAREA* sa = reinterpret_cast<LWTTLDATA_SEAAREA*>(region.get_address());
     size_t read_accum = 0;
     while (read_accum < region.get_size()) {
@@ -68,7 +68,7 @@ void seaarea::init_area_data(boost::interprocess::mapped_region& region, std::ve
     // dump seaports.dat into r-tree data if r-tree is empty.
     if (rtree->size() == 0) {
         for (int i = 0; i < entries.size(); i++) {
-            box_t box{ 
+            box box{ 
                 { entries[i].xmin, entries[i].ymin },
             { entries[i].xmax, entries[i].ymax } };
             rtree->insert(std::make_pair(box, i));
@@ -79,7 +79,7 @@ void seaarea::init_area_data(boost::interprocess::mapped_region& region, std::ve
 seaarea::seaarea(const std::string& rtree_filename, size_t mmap_max_size, const std::string& source_filename)
     : seaarea_rtree_file(bi::open_or_create, rtree_filename.c_str(), mmap_max_size)
     , seaarea_alloc(seaarea_rtree_file.get_segment_manager())
-    , seaarea_rtree(seaarea_rtree_file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), seaarea_alloc))
+    , seaarea_rtree(seaarea_rtree_file.find_or_construct<rtree>("rtree")(params(), indexable(), equal_to(), seaarea_alloc))
     , seaarea_file(source_filename.c_str(), boost::interprocess::read_only)
     , seaarea_region(seaarea_file, boost::interprocess::read_only) {
     init_area_data(seaarea_region, seaarea_entries, seaarea_rtree);

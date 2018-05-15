@@ -49,18 +49,18 @@ std::vector<sea_static_object> sea_static::query_near_to_packet(int xc0, int yc0
     return sop_list;
 }
 
-std::vector<sea_static_object::value_t> sea_static::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
+std::vector<sea_static_object::value> sea_static::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
     return query_tree(xc - half_lng_ex, yc - half_lat_ex, xc + half_lng_ex, yc + half_lat_ex);
 }
 
-std::vector<sea_static_object::value_t> sea_static::query_tree(int xc0, int yc0, int xc1, int yc1) const {
-    sea_static_object::box_t query_box(sea_static_object::point_t(xc0, yc0), sea_static_object::point_t(xc1, yc1));
-    std::vector<sea_static_object::value_t> result_s;
+std::vector<sea_static_object::value> sea_static::query_tree(int xc0, int yc0, int xc1, int yc1) const {
+    sea_static_object::box query_box(sea_static_object::point(xc0, yc0), sea_static_object::point(xc1, yc1));
+    std::vector<sea_static_object::value> result_s;
     land_rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     return result_s;
 }
 
-void load_from_dump_if_empty(sea_static_object::rtree_t* rtree_ptr, const char* dump_filename) {
+void load_from_dump_if_empty(sea_static_object::rtree* rtree_ptr, const char* dump_filename) {
     if (rtree_ptr->size() == 0) {
         LOGI("R-tree empty. Trying to create R-tree from dump file %s...",
              dump_filename);
@@ -74,7 +74,7 @@ void load_from_dump_if_empty(sea_static_object::rtree_t* rtree_ptr, const char* 
                 for (size_t i = 0; i < read_count; i++) {
                     rect_count++;
                     xy32xy32* r = reinterpret_cast<xy32xy32*>(read_buf) + i;
-                    sea_static_object::box_t box(sea_static_object::point_t(r->xy0.x, r->xy0.y), sea_static_object::point_t(r->xy1.x, r->xy1.y));
+                    sea_static_object::box box(sea_static_object::point(r->xy0.x, r->xy0.y), sea_static_object::point(r->xy1.x, r->xy1.y));
                     rtree_ptr->insert(std::make_pair(box, rect_count));
                 }
             }
@@ -86,7 +86,7 @@ void load_from_dump_if_empty(sea_static_object::rtree_t* rtree_ptr, const char* 
     }
 }
 
-void sea_static::mark_sea_water(sea_static_object::rtree_t* rtree) {
+void sea_static::mark_sea_water(sea_static_object::rtree* rtree) {
     const char* sea_water_dump_filename = "rtree/sea_water_dump.dat";
     LOGI("Checking %1%...", sea_water_dump_filename);
     struct stat stat_buffer;
@@ -94,14 +94,14 @@ void sea_static::mark_sea_water(sea_static_object::rtree_t* rtree) {
         std::unordered_set<int> sea_water_set;
         LOGI("%1% not exists. Creating...", sea_water_dump_filename);
         LOGI("R-tree total node: %1%", rtree->size());
-        std::vector<sea_static_object::rtree_t::const_query_iterator> open_set;
+        std::vector<sea_static_object::rtree::const_query_iterator> open_set;
         for (auto it = rtree->qbegin(bgi::intersects(astarrtree::box_t_from_xy(xy32{ 0,0 }))); it != rtree->qend(); it++) {
             sea_water_set.insert(it->second);
             open_set.push_back(it);
         }
         std::unordered_set<int> visited_set;
         while (open_set.size() > 0) {
-            std::vector<sea_static_object::rtree_t::const_query_iterator> next_open_set;
+            std::vector<sea_static_object::rtree::const_query_iterator> next_open_set;
             for (auto open_it : open_set) {
                 for (auto it = rtree->qbegin(bgi::intersects(open_it->first)); it != rtree->qend(); it++) {
                     if (visited_set.find(it->second) == visited_set.end()) {
@@ -141,10 +141,10 @@ void sea_static::mark_sea_water(sea_static_object::rtree_t* rtree) {
 sea_static::sea_static()
     : land_file(bi::open_or_create, DATA_ROOT WORLDMAP_LAND_MAX_RECT_RTREE_RTREE_FILENAME, WORLDMAP_LAND_MAX_RECT_RTREE_MMAP_MAX_SIZE)
     , land_alloc(land_file.get_segment_manager())
-    , land_rtree_ptr(land_file.find_or_construct<sea_static_object::rtree_t>("rtree")(sea_static_object::params_t(), sea_static_object::indexable_t(), sea_static_object::equal_to_t(), land_alloc))
+    , land_rtree_ptr(land_file.find_or_construct<sea_static_object::rtree>("rtree")(sea_static_object::params(), sea_static_object::indexable(), sea_static_object::equal_to(), land_alloc))
     , water_file(bi::open_or_create, DATA_ROOT WORLDMAP_WATER_MAX_RECT_RTREE_RTREE_FILENAME, WORLDMAP_WATER_MAX_RECT_RTREE_MMAP_MAX_SIZE)
     , water_alloc(water_file.get_segment_manager())
-    , water_rtree_ptr(water_file.find_or_construct<sea_static_object::rtree_t>("rtree")(sea_static_object::params_t(), sea_static_object::indexable_t(), sea_static_object::equal_to_t(), water_alloc))
+    , water_rtree_ptr(water_file.find_or_construct<sea_static_object::rtree>("rtree")(sea_static_object::params(), sea_static_object::indexable(), sea_static_object::equal_to(), water_alloc))
     , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
     , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
     , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
@@ -164,10 +164,10 @@ sea_static::sea_static()
     }*/
 
     // TESTING-----------------
-    //sea_static_object::box_t origin_land_cell{ {-32,-32},{32,32} };
-    sea_static_object::box_t origin_land_cell{ { 0,0 },{ 1,1 } };
-    sea_static_object::box_t test_land_cell{ { 0,0 },{ 15,15 } };
-    std::vector<sea_static_object::value_t> to_be_removed;
+    //sea_static_object::box origin_land_cell{ {-32,-32},{32,32} };
+    sea_static_object::box origin_land_cell{ { 0,0 },{ 1,1 } };
+    sea_static_object::box test_land_cell{ { 0,0 },{ 15,15 } };
+    std::vector<sea_static_object::value> to_be_removed;
     land_rtree_ptr->query(bgi::contains(origin_land_cell), std::back_inserter(to_be_removed));
     land_rtree_ptr->query(bgi::contains(test_land_cell), std::back_inserter(to_be_removed));
     for (auto it : to_be_removed) {
@@ -179,7 +179,7 @@ sea_static::sea_static()
 
 std::vector<xy32> sea_static::calculate_waypoints(const xy32 & from, const xy32 & to) const {
     auto from_box = astarrtree::box_t_from_xy(from);
-    std::vector<astarrtree::value_t> from_result_s;
+    std::vector<astarrtree::value> from_result_s;
     water_rtree_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
     xy32 new_from = from;
     bool new_from_sea_water = false;
@@ -198,7 +198,7 @@ std::vector<xy32> sea_static::calculate_waypoints(const xy32 & from, const xy32 
     }
 
     auto to_box = astarrtree::box_t_from_xy(to);
-    std::vector<astarrtree::value_t> to_result_s;
+    std::vector<astarrtree::value> to_result_s;
     water_rtree_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
     xy32 new_to = to;
     bool new_to_sea_water = false;
@@ -224,7 +224,7 @@ std::vector<xy32> sea_static::calculate_waypoints(const xy32 & from, const xy32 
     }
 }
 
-std::vector<xy32> sea_static::calculate_waypoints(const sea_static_object::point_t & from, const sea_static_object::point_t & to) const {
+std::vector<xy32> sea_static::calculate_waypoints(const sea_static_object::point & from, const sea_static_object::point & to) const {
     xy32 fromxy;
     xy32 toxy;
     fromxy.x = from.get<0>();

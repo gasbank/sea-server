@@ -33,7 +33,7 @@ void sea::populate_test() {
     }
     //travel_to("Test A", 129.393311f + 1.0f, 35.4739418f, 0.01f);
     LOGI("Spawning finished.");
-    std::vector<sea_object_public> sop_list;
+    std::vector<sea_object_pod> sop_list;
     query_near_to_packet(0, 0, 10, 10, sop_list);
 }
 
@@ -185,11 +185,11 @@ void sea::teleport_by(const char* guid, float dx, float dy) {
     }
 }
 
-void sea::query_near_lng_lat_to_packet(float lng, float lat, float ex_lng, float ex_lat, std::vector<sea_object_public>& sop_list) const {
+void sea::query_near_lng_lat_to_packet(float lng, float lat, float ex_lng, float ex_lat, std::vector<sea_object_pod>& sop_list) const {
     query_near_to_packet(lng_to_xc(lng), lat_to_yc(lat), ex_lng, ex_lat, sop_list);
 }
 
-void sea::query_near_to_packet(float xc, float yc, float ex_lng, float ex_lat, std::vector<sea_object_public>& sop_list) const {
+void sea::query_near_to_packet(float xc, float yc, float ex_lng, float ex_lat, std::vector<sea_object_pod>& sop_list) const {
     auto id_list = query_tree(xc, yc, ex_lng, ex_lat);
     sop_list.resize(id_list.size());
     std::size_t i = 0;

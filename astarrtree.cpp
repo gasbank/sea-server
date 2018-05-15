@@ -12,11 +12,11 @@ using ss::LOGEx;
 struct PathfindContext {
     xy32xy32 from_rect;
     xy32xy32 to_rect;
-    rtree_t* rtree_water;
-    rtree_t* rtree_land;
+    rtree* rtree_water;
+    rtree* rtree_land;
 };
 
-xy32xy32 xyxy_from_box_t(const box_t& v) {
+xy32xy32 xyxy_from_box_t(const box& v) {
     xy32xy32 r;
     r.xy0.x = v.min_corner().get<0>();
     r.xy0.y = v.min_corner().get<1>();
@@ -25,8 +25,8 @@ xy32xy32 xyxy_from_box_t(const box_t& v) {
     return r;
 }
 
-box_t box_t_from_xyxy(const xy32xy32& v) {
-    box_t r;
+box box_t_from_xyxy(const xy32xy32& v) {
+    box r;
     r.min_corner().set<0>(v.xy0.x);
     r.min_corner().set<1>(v.xy0.y);
     r.max_corner().set<0>(v.xy1.x);
@@ -36,9 +36,9 @@ box_t box_t_from_xyxy(const xy32xy32& v) {
 
 void RTreePathNodeNeighbors(ASNeighborList neighbors, void *node, void *context) {
     auto n = reinterpret_cast<const xy32xy32xy32*>(node);
-    rtree_t* rtree_water_ptr = reinterpret_cast<PathfindContext*>(context)->rtree_water;
-    box_t query_box = box_t_from_xyxy(n->box);
-    std::vector<value_t> result_s;
+    rtree* rtree_water_ptr = reinterpret_cast<PathfindContext*>(context)->rtree_water;
+    box query_box = box_t_from_xyxy(n->box);
+    std::vector<value> result_s;
     rtree_water_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     for (const auto& v : result_s) {
         auto xyxy = xyxy_from_box_t(v.first);
@@ -176,7 +176,7 @@ void convexHull(ixy32 points[], size_t n, float& shortest_len) {
     }
 }
 
-typedef std::pair<point_t, int> point_value_t;
+typedef std::pair<point, int> point_value_t;
 const float pi = boost::math::constants::pi<float>();
 
 bool check_not_duplicate(const xy32& from, const xy32& to, const ixy32& p) {
@@ -241,9 +241,9 @@ float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
     //    int obstacle_max_corner_y = INT_MIN;
 
     //    bool seg_valid = false;
-    //    bgm::segment<point_t> segment_between_points{ { from->point.x, from->point.y },{ to->point.x, to->point.y } };
-    //    point_t from_point(from->point.x, from->point.y);
-    //    point_t to_point(to->point.x, to->point.y);
+    //    bgm::segment<point> segment_between_points{ { from->point.x, from->point.y },{ to->point.x, to->point.y } };
+    //    point from_point(from->point.x, from->point.y);
+    //    point to_point(to->point.x, to->point.y);
     //    //bool seg_contained = false;
 
     //    std::vector<ixy32> A{
@@ -268,7 +268,7 @@ float RTreePathNodeHeuristic(void *fromNode, void *toNode, void *context) {
     //        if (obstacle_max_corner_y < seg_it->first.max_corner().get<1>()) {
     //            obstacle_max_corner_y = seg_it->first.max_corner().get<1>();
     //        }
-    //        box_t obstacle{ { obstacle_min_corner_x, obstacle_min_corner_y },{ obstacle_max_corner_x ,obstacle_max_corner_y } };
+    //        box obstacle{ { obstacle_min_corner_x, obstacle_min_corner_y },{ obstacle_max_corner_x ,obstacle_max_corner_y } };
     //        if (boost::geometry::within(from_point, obstacle)) {
     //            LOGEx("%1%: from point included in obstacle! from point: %2% %3% / obs: %4% %5% %6% %7%",
     //                  __func__,
@@ -719,8 +719,8 @@ int RTreePixelPathNodeComparator(void *node1, void *node2, void *context) {
     }
 }
 
-box_t astarrtree::box_t_from_xy(xy32 v) {
-    return box_t(point_t(v.x, v.y), point_t(v.x + 1, v.y + 1));
+box astarrtree::box_t_from_xy(xy32 v) {
+    return box(point(v.x, v.y), point(v.x + 1, v.y + 1));
 }
 
 xy32xy32 xyxy_from_xy(xy32 v) {
@@ -777,17 +777,17 @@ void astarrtree::astar_rtree(const char* water_rtree_filename,
                              xy32 from,
                              xy32 to) {
     bi::managed_mapped_file water_file(bi::open_or_create, water_rtree_filename, water_output_max_size);
-    allocator_t water_alloc(water_file.get_segment_manager());
-    rtree_t* rtree_water_ptr = water_file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), water_alloc);
+    allocator water_alloc(water_file.get_segment_manager());
+    rtree* rtree_water_ptr = water_file.find_or_construct<rtree>("rtree")(params(), indexable(), equal_to(), water_alloc);
 
     bi::managed_mapped_file land_file(bi::open_or_create, land_rtree_filename, land_output_max_size);
-    allocator_t land_alloc(land_file.get_segment_manager());
-    rtree_t* rtree_land_ptr = land_file.find_or_construct<rtree_t>("rtree")(params_t(), indexable_t(), equal_to_t(), land_alloc);
+    allocator land_alloc(land_file.get_segment_manager());
+    rtree* rtree_land_ptr = land_file.find_or_construct<rtree>("rtree")(params(), indexable(), equal_to(), land_alloc);
 
     astar_rtree_memory(rtree_water_ptr, rtree_land_ptr, from, to);
 }
 
-bool astarrtree::find_nearest_point_if_empty(rtree_t* rtree_ptr, xy32& from, box_t& from_box, std::vector<value_t>& from_result_s) {
+bool astarrtree::find_nearest_point_if_empty(rtree* rtree_ptr, xy32& from, box& from_box, std::vector<value>& from_result_s) {
     if (from_result_s.size() == 0) {
         auto nearest_it = rtree_ptr->qbegin(bgi::nearest(from_box, 1));
         if (nearest_it == rtree_ptr->qend()) {
@@ -859,7 +859,7 @@ static int RTreePathNodeEarlyExit(size_t visitedCount, void *visitingNode, void 
     return 0;
 }
 
-std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_water_ptr, rtree_t* rtree_land_ptr, xy32 from, xy32 to) {
+std::vector<xy32> astarrtree::astar_rtree_memory(rtree* rtree_water_ptr, rtree* rtree_land_ptr, xy32 from, xy32 to) {
     float distance = static_cast<float>(abs(from.x - to.x) + abs(from.y - to.y));
     ss::LOGI("Pathfinding from (%1%,%2%) -> (%3%,%4%) [Manhattan distance = %5%]",
              from.x,
@@ -877,7 +877,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_water_ptr, rtree
     ss::LOGI("R Tree land size: %1%", rtree_land_ptr->size());
 
     auto from_box = box_t_from_xy(from);
-    std::vector<value_t> from_result_s;
+    std::vector<value> from_result_s;
     rtree_water_ptr->query(bgi::contains(from_box), std::back_inserter(from_result_s));
     if (astarrtree::find_nearest_point_if_empty(rtree_water_ptr, from, from_box, from_result_s)) {
         ss::LOGI("  'From' point changed to (%1%,%2%)",
@@ -886,7 +886,7 @@ std::vector<xy32> astarrtree::astar_rtree_memory(rtree_t* rtree_water_ptr, rtree
     }
 
     auto to_box = box_t_from_xy(to);
-    std::vector<value_t> to_result_s;
+    std::vector<value> to_result_s;
     rtree_water_ptr->query(bgi::contains(to_box), std::back_inserter(to_result_s));
     if (astarrtree::find_nearest_point_if_empty(rtree_water_ptr, to, to_box, to_result_s)) {
         ss::LOGI("  'To' point changed to (%1%,%2%)",

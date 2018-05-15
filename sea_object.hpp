@@ -1,19 +1,11 @@
 #pragma once
 
 #include "container.hpp"
+#include "sea_object_pod.hpp"
 
 namespace ss {
     namespace bg = boost::geometry;
     namespace bgi = boost::geometry::index;
-
-    struct sea_object_public {
-        int id;
-        int type;
-        float fx, fy;
-        float fw, fh;
-        float fvx, fvy;
-        char guid[64];
-    };
 
     enum SEA_OBJECT_STATE {
         SOS_SAILING,
@@ -40,7 +32,7 @@ namespace ss {
             state(SOS_SAILING),
             remain_loading_time(0) {
         }
-        void fill_sop(sea_object_public& sop) const {
+        void fill_sop(sea_object_pod& sop) const {
             sop.fx = fx;
             sop.fy = fy;
             sop.fw = fw;
