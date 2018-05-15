@@ -77,21 +77,6 @@ city::city(boost::asio::io_service& io_service,
         abort();
     }
 
-    // TESTING-----------------
-    int i = count;
-    city_object::point origin_port{ 0,0 };
-    std::vector<city_object::value> to_be_removed;
-    rtree_ptr->query(bgi::intersects(city_object::box{ { -32,-32 },{ 32,32 } }), std::back_inserter(to_be_removed));
-    for (auto e : to_be_removed) {
-        rtree_ptr->remove(e);
-    }
-    rtree_ptr->insert(std::make_pair(origin_port, i));
-    id_name[i] = "Origin Port";
-    name_id["Origin Port"] = i;
-    id_point[i] = origin_port;
-    count++;
-    // TESTING-----------------
-
     timer_.async_wait(boost::bind(&city::update, this));
 }
 

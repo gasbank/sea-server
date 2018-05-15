@@ -65,21 +65,6 @@ seaport::seaport()
              rtree_ptr->size());
         abort();
     }
-
-    // TESTING-----------------
-    int i = count;
-    seaport_object::point origin_port{ 0,0 };
-    std::vector<seaport_object::value> to_be_removed;
-    rtree_ptr->query(bgi::intersects(seaport_object::box{ { -32,-32 },{ 32,32 } }), std::back_inserter(to_be_removed));
-    for (auto e : to_be_removed) {
-        rtree_ptr->remove(e);
-    }
-    rtree_ptr->insert(std::make_pair(origin_port, i));
-    id_name[i] = "Origin Port";
-    id_point[i] = origin_port;
-    id_owner_id[i] = 0;
-    count++;
-    // TESTING-----------------
 }
 
 int seaport::lng_to_xc(float lng) const {
@@ -196,6 +181,7 @@ int seaport::spawn(const char* name, int xc0, int yc0, int owner_id) {
              id);
     }
     id_owner_id[id] = owner_id;
+    id_cargo[id] = 0;
 
     update_chunk_key_ts(xc0, yc0);
     return id;
@@ -217,13 +203,15 @@ void seaport::despawn(int id) {
     rtree_ptr->remove(std::make_pair(it->second, id));
     id_point.erase(it);
     id_name.erase(id);
-    //name_id
+    id_owner_id.erase(id);
+    id_cargo.erase(id);
 }
 
 void seaport::set_name(int id, const char* name, int owner_id) {
     if (id_point.find(id) != id_point.end()) {
         id_name[id] = name;
         id_owner_id[id] = owner_id;
+        id_cargo[id] = 0;
     } else {
         LOGE("%1%: cannot find seaport id %2%. seaport set name to '%3%' failed.",
              __func__,
@@ -268,7 +256,12 @@ int seaport::add_cargo(int id, int amount) {
     if (amount > MAX_CARGO) {
         amount = MAX_CARGO;
     }
-    const auto before = id_cargo[id];
+    const auto before_it = id_cargo.find(id);
+    if (before_it == id_cargo.end()) {
+        LOGE("%1%: SP %2% not exist", __func__, id);
+        return 0;
+    }
+    const auto before = before_it->second;
     auto after = before + amount;
     if (after > MAX_CARGO) {
         after = MAX_CARGO;
@@ -284,7 +277,12 @@ int seaport::remove_cargo(int id, int amount) {
     if (amount > MAX_CARGO) {
         amount = MAX_CARGO;
     }
-    const auto before = id_cargo[id];
+    const auto before_it = id_cargo.find(id);
+    if (before_it == id_cargo.end()) {
+        LOGE("%1%: SP %2% not exist", __func__, id);
+        return 0;
+    }
+    const auto before = before_it->second;
     auto after = before - amount;
     if (after < 0) {
         after = 0;
