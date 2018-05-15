@@ -27,6 +27,7 @@ namespace ss {
     private:
         std::vector<city_object::value> query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const;
         void update_chunk_key_ts(int xc0, int yc0);
+        void generate_cargo();
         bi::managed_mapped_file file;
         city_object::allocator alloc;
         city_object::rtree* rtree_ptr;

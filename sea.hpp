@@ -35,8 +35,6 @@ namespace ss {
         float lng_to_xc(float lng) const;
         float lat_to_yc(float lat) const;
         std::vector<int> query_tree(float xc, float yc, float ex_lng, float ex_lat) const;
-        int add_cargo(int id, int amount);
-        int remove_cargo(int id, int amount);
 
         boost::asio::io_service& io_service;
         std::unordered_map<int, sea_object> sea_objects;

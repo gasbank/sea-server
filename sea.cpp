@@ -257,31 +257,75 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
         // ship docked at seaport2
         // start unloading...
         auto obj = get_object(id);
+        if (obj == nullptr) {
+            LOGE("Cannot find sea object with ID %1%", id);
+            return false;
+        }
         obj->set_velocity(0, 0);
         obj->set_state(SOS_UNLOADING);
-        std::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(io_service, boost::posix_time::milliseconds(5000)));
+        float x, y;
+        obj->get_xy(x, y);
+        const auto unloading_time = boost::posix_time::milliseconds(5000);
+        LOGI("S %1% {%2%,%3%}: start unloading from SP %4%... (%5% ms)",
+             id,
+             x,
+             y,
+             r->get_seaport2_id(),
+             unloading_time.total_milliseconds());
+        std::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(io_service, unloading_time));
         t->async_wait([this, id, t, sp, r](const boost::system::error_code& error) {
             if (!error) {
                 auto obj = get_object(id);
                 if (obj == nullptr) {
-                    LOGE("Cannot find sea object with ID %d", id);
+                    LOGE("Cannot find sea object with ID %1%", id);
                     return;
                 }
-                obj->remove_cargo(MAX_CARGO);
+                float x, y;
+                obj->get_xy(x, y);
+                const auto unloaded_cargo = obj->remove_cargo(MAX_CARGO,
+                                                              r->get_seaport2_id(),
+                                                              xy32{static_cast<int>(x), static_cast<int>(y)}
+                );
+                LOGI("S %1% {%2%,%3%}: unloading finished. %4% cargo(s) unloaded.",
+                     id,
+                     x,
+                     y,
+                     unloaded_cargo);
                 obj->set_state(SOS_LOADING);
-                std::shared_ptr<boost::asio::deadline_timer> t2(new boost::asio::deadline_timer(io_service, boost::posix_time::milliseconds(5000)));
-                t2->async_wait([this, id, t2, sp, r](const boost::system::error_code& error) {
+                const auto loading_time = boost::posix_time::milliseconds(5000);
+                t->expires_at(t->expires_at() + loading_time);
+                LOGI("S %1% {%2%,%3%}: start loading from SP %4%... (%5% ms)",
+                     id,
+                     x,
+                     y,
+                     r->get_seaport2_id(),
+                     loading_time.total_milliseconds());
+                t->async_wait([this, id, t, sp, r](const boost::system::error_code& error) {
                     if (!error) {
                         auto obj = get_object(id);
                         if (obj == nullptr) {
-                            LOGE("Cannot find sea object with ID %d", id);
+                            LOGE("Cannot find sea object with ID %1%", id);
                             return;
                         }
-                        const auto removed_cargo = sp->remove_cargo(r->get_seaport2_id(), 10);
-                        obj->add_cargo(removed_cargo);
+                        const auto loaded_cargo = sp->remove_cargo(r->get_seaport2_id(), 10);
+                        float x, y;
+                        obj->get_xy(x, y);
+                        obj->add_cargo(loaded_cargo, 
+                                       r->get_seaport2_id(),
+                                       xy32{ static_cast<int>(x), static_cast<int>(y) });
+                        
+                        LOGI("S %1% {%2%,%3%}: loading finished. %4% cargo(s) loaded.",
+                             id,
+                             x,
+                             y,
+                             loaded_cargo);
                         uas->send_arrival(obj->get_type());
                         // reversing the route
                         r->reverse();
+                        LOGI("S %1% {%2%,%3%}: reversing the route.",
+                             id,
+                             x,
+                             y);
                         // sail again
                         obj->set_state(SOS_SAILING);
                     } else {
@@ -292,31 +336,6 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
                 LOGE(error.message());
             }
         });
-        //auto obj = get_object(id);
-        //obj->set_state(SOS_LOADING);
-        //const auto removed_cargo = sp->remove_cargo(r->get_seaport2_id(), 10);
-        //obj->add_cargo(removed_cargo);
-        //obj->set_velocity(0, 0);
-        //obj->set_remain_loading_time(5.0f);
-        //uas->send_arrival(obj->get_type());
-        //// reversing the route
-        //r->reverse();
     }
     return true;
-}
-
-int sea::add_cargo(int id, int amount) {
-    auto obj = get_object(id);
-    if (obj) {
-        return obj->add_cargo(amount);
-    }
-    return 0;
-}
-
-int sea::remove_cargo(int id, int amount) {
-    auto obj = get_object(id);
-    if (obj) {
-        return obj->remove_cargo(amount);
-    }
-    return 0;
 }

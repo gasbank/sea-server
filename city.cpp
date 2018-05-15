@@ -283,12 +283,24 @@ void city::update() {
     timer_.expires_at(timer_.expires_at() + update_interval);
     timer_.async_wait(boost::bind(&city::update, this));
 
+    generate_cargo();
+}
+
+void city::generate_cargo() {
+    // iterate all cities
     const auto bounds = rtree_ptr->bounds();
     for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
         const auto xc = it->first.get<0>();
         const auto yc = it->first.get<1>();
-        for (const auto sop : seaport_->query_near_to_packet(xc, yc, 10.0f, 10.0f)) {
-            seaport_->add_cargo(sop.id, 1);
+        // query near seaports
+        const auto near_extent = 10.0f;
+        const auto seaports = seaport_->query_near_to_packet(xc, yc, near_extent, near_extent);
+        if (seaports.size() > 0) {
+            const auto total_cargo = 10.0f;
+            const auto cargo = std::max(1, boost::math::iround(total_cargo / seaports.size()));
+            for (const auto sop : seaports) {
+                seaport_->add_cargo(sop.id, cargo);
+            }
         }
     }
 }

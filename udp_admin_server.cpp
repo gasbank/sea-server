@@ -108,6 +108,7 @@ struct spawn_port_command {
     char name[64];
     int xc;
     int yc;
+    int owner_id;
 };
 
 struct spawn_port_command_reply {
@@ -120,6 +121,7 @@ struct name_port_command {
     command _;
     int port_id;
     char name[64];
+    int owner_id;
 };
 
 struct delete_port_command {
@@ -218,12 +220,13 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             const spawn_port_command* spawn = reinterpret_cast<spawn_port_command*>(recv_buffer_.data());;
             xy32 spawn_pos = { spawn->xc, spawn->yc };
             if (sea_static_->is_water(spawn_pos)) {
-                int id = seaport_->spawn(spawn->name, spawn->xc, spawn->yc);
+                int id = seaport_->spawn(spawn->name, spawn->xc, spawn->yc, spawn->owner_id);
                 if (id >= 0) {
-                    LOGI("New port spawned. (x=%1%, y=%2%)",
+                    LOGI("New seaport SP %1% {%2%,%3%} spawned. owner_id=%4%",
+                         id,
                          spawn_pos.x,
-                         spawn_pos.y);
-
+                         spawn_pos.y,
+                         spawn->owner_id);
                     spawn_port_command_reply reply;
                     memset(&reply, 0, sizeof(spawn_port_command_reply));
                     reply._.type = 4;
@@ -250,7 +253,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             assert(bytes_transferred == sizeof(name_port_command));
             LOGI("Name Port type: %1%", static_cast<int>(cp->type));
             const name_port_command* name_port = reinterpret_cast<name_port_command*>(recv_buffer_.data());;
-            seaport_->set_name(name_port->port_id, name_port->name);
+            seaport_->set_name(name_port->port_id, name_port->name, name_port->owner_id);
             break;
         }
         case 8: // Delete Port

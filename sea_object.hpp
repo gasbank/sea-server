@@ -2,6 +2,7 @@
 
 #include "container.hpp"
 #include "sea_object.hpp"
+#include "xy.hpp"
 
 typedef struct _LWPTTLFULLSTATEOBJECT LWPTTLFULLSTATEOBJECT;
 
@@ -22,30 +23,36 @@ namespace ss {
         typedef bg::model::box<point> box;
         typedef std::pair<box, int> value;
     public:
-        sea_object(int id, int type, float fx, float fy, float fw, float fh, const value& rtree_value)
-            : id(id),
-            type(type),
-            fx(fx),
-            fy(fy),
-            fw(fw),
-            fh(fh),
-            fvx(0),
-            fvy(0),
-            rtree_value(rtree_value),
-            state(SOS_SAILING),
-            remain_loading_time(0) {
-        }
         explicit sea_object()
-            : id(0),
-            type(0),
-            fx(0),
-            fy(0),
-            fw(0),
-            fh(0),
-            fvx(0),
-            fvy(0),
-            state(SOS_NOT_SET),
-            remain_loading_time(0) {
+            : id(0)
+            , type(0)
+            , fx(0)
+            , fy(0)
+            , fw(0)
+            , fh(0)
+            , fvx(0)
+            , fvy(0)
+            , state(SOS_NOT_SET)
+            , remain_loading_time(0)
+            , cargo(0)
+            , cargo_origin_seaport_id(0)
+            , cargo_origin_xy({ 0,0 }) {
+        }
+        sea_object(int id, int type, float fx, float fy, float fw, float fh, const value& rtree_value)
+            : id(id)
+            , type(type)
+            , fx(fx)
+            , fy(fy)
+            , fw(fw)
+            , fh(fh)
+            , fvx(0)
+            , fvy(0)
+            , rtree_value(rtree_value)
+            , state(SOS_SAILING)
+            , remain_loading_time(0)
+            , cargo(0)
+            , cargo_origin_seaport_id(0)
+            , cargo_origin_xy({ 0,0 }) {
         }
         void fill_sop(sea_object& sop) const {
             sop = *this;
@@ -95,8 +102,8 @@ namespace ss {
         void update(float delta_time);
         int get_type() const { return type; }
         int get_id() const { return id; }
-        int add_cargo(int amount);
-        int remove_cargo(int amount);
+        int add_cargo(int amount, int cargo_origin_seaport_id, const xy32& cargo_origin_xy);
+        int remove_cargo(int amount, int cargo_destination_seaport_id, const xy32& cargo_destination_xy);
         int get_cargo() const { return cargo; }
         void fill_packet(LWPTTLFULLSTATEOBJECT& p) const;
     private:
@@ -112,5 +119,7 @@ namespace ss {
         float remain_unloading_time;
         float remain_loading_time;
         int cargo;
+        int cargo_origin_seaport_id;
+        xy32 cargo_origin_xy;
     };
 }
