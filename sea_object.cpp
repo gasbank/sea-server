@@ -1,5 +1,5 @@
 #include "precompiled.hpp"
-#include "sea-object.hpp"
+#include "sea_object.hpp"
 
 using namespace ss;
 

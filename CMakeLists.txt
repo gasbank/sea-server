@@ -47,19 +47,19 @@ include_directories("lz4/lib")
 find_package(Threads)
 
 SET(ServerSources
-        sea-server.cpp
-        udp-server.cpp
-        udp-server.hpp
-        udp-admin-server.cpp
-        udp-admin-server.hpp
-        tcp-server.cpp
-        tcp-server.hpp
-        tcp-connection.cpp
-        tcp-connection.hpp
+        sea_server.cpp
+        udp_server.cpp
+        udp_server.hpp
+        udp_admin_server.cpp
+        udp_admin_server.hpp
+        tcp_server.cpp
+        tcp_server.hpp
+        tcp_connection.cpp
+        tcp_connection.hpp
         sea.cpp
         sea.hpp
-        sea-object.cpp
-        sea-object.hpp
+        sea_object.cpp
+        sea_object.hpp
         sea_static.cpp
         sea_static.hpp
         sea_static_object.cpp
@@ -84,7 +84,8 @@ SET(ServerSources
         city_object.cpp
         city_object.hpp
         packet.h
-        cargo.cpp cargo.h)
+        cargo.cpp
+		cargo.h)
 
 ADD_MSVC_PRECOMPILED_HEADER("precompiled.hpp" "precompiled.cpp" ServerSources)
 ADD_EXECUTABLE(sea-server ${ServerSources} AStar.c AStar.h CohenSutherland.c CohenSutherland.h)

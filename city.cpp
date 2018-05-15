@@ -22,7 +22,7 @@ city::city(boost::asio::io_service& io_service,
            std::shared_ptr<seaport> seaport)
     : file(bi::open_or_create, CITY_RTREE_FILENAME, CITY_RTREE_MMAP_MAX_SIZE)
     , alloc(file.get_segment_manager())
-    , rtree_ptr(file.find_or_construct<city_object_public::rtree_t>("rtree")(city_object_public::params_t(), city_object_public::indexable_t(), city_object_public::equal_to_t(), alloc))
+    , rtree_ptr(file.find_or_construct<city_object::rtree_t>("rtree")(city_object::params_t(), city_object::indexable_t(), city_object::equal_to_t(), alloc))
     , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
     , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
     , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
@@ -36,7 +36,7 @@ city::city(boost::asio::io_service& io_service,
     if (rtree_ptr->size() == 0) {
         LOGI("Dumping %1% cities...", count);
         for (int i = 0; i < count; i++) {
-            city_object_public::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+            city_object::point_t point(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
             rtree_ptr->insert(std::make_pair(point, i));
         }
     }
@@ -45,13 +45,13 @@ city::city(boost::asio::io_service& io_service,
         id_population[i] = sp[i].population;
         id_country[i] = sp[i].country;
         name_id[sp[i].name] = i;
-        //id_point[i] = city_object_public::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
+        //id_point[i] = city_object::point_t(lng_to_xc(sp[i].lng), lat_to_yc(sp[i].lat));
     }
 
     const auto monotonic_uptime = get_monotonic_uptime();
 
     std::set<std::pair<int, int> > point_set;
-    std::vector<city_object_public::value_t> duplicates;
+    std::vector<city_object::value_t> duplicates;
     const auto bounds = rtree_ptr->bounds();
     for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
         const auto xc0 = it->first.get<0>();
@@ -79,9 +79,9 @@ city::city(boost::asio::io_service& io_service,
 
     // TESTING-----------------
     int i = count;
-    city_object_public::point_t origin_port{ 0,0 };
-    std::vector<city_object_public::value_t> to_be_removed;
-    rtree_ptr->query(bgi::intersects(city_object_public::box_t{ { -32,-32 },{ 32,32 } }), std::back_inserter(to_be_removed));
+    city_object::point_t origin_port{ 0,0 };
+    std::vector<city_object::value_t> to_be_removed;
+    rtree_ptr->query(bgi::intersects(city_object::box_t{ { -32,-32 },{ 32,32 } }), std::back_inserter(to_be_removed));
     for (auto e : to_be_removed) {
         rtree_ptr->remove(e);
     }
@@ -105,29 +105,29 @@ int city::lat_to_yc(float lat) const {
     return static_cast<int>(roundf(res_height / 2 - lat / 90.0f * res_height / 2));
 }
 
-//std::vector<city_object_public> city::query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const {
+//std::vector<city_object> city::query_near_lng_lat_to_packet(float lng, float lat, int half_lng_ex, int half_lat_ex) const {
 //    return query_near_to_packet(lng_to_xc(lng),
 //                                lat_to_yc(lat),
 //                                half_lng_ex,
 //                                half_lat_ex);
 //}
 
-std::vector<city_object_public> city::query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const {
+std::vector<city_object> city::query_near_to_packet(int xc, int yc, float ex_lng, float ex_lat) const {
     const auto half_lng_ex = boost::math::iround(ex_lng / 2);
     const auto half_lat_ex = boost::math::iround(ex_lat / 2);
     auto values = query_tree_ex(xc, yc, half_lng_ex, half_lat_ex);
-    std::vector<city_object_public> sop_list;
+    std::vector<city_object> sop_list;
     for (std::size_t i = 0; i < values.size(); i++) {
         const auto city_id = values[i].second;
         const auto population_it = id_population.find(city_id);
-        sop_list.emplace_back(city_object_public(values[i], population_it != id_population.cend() ? population_it->second : 0));
+        sop_list.emplace_back(city_object(values[i], population_it != id_population.cend() ? population_it->second : 0));
     }
     return sop_list;
 }
 
-std::vector<city_object_public::value_t> city::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
-    city_object_public::box_t query_box(city_object_public::point_t(xc - half_lng_ex, yc - half_lat_ex), city_object_public::point_t(xc + half_lng_ex, yc + half_lat_ex));
-    std::vector<city_object_public::value_t> result_s;
+std::vector<city_object::value_t> city::query_tree_ex(int xc, int yc, int half_lng_ex, int half_lat_ex) const {
+    city_object::box_t query_box(city_object::point_t(xc - half_lng_ex, yc - half_lat_ex), city_object::point_t(xc + half_lng_ex, yc + half_lat_ex));
+    std::vector<city_object::value_t> result_s;
     rtree_ptr->query(bgi::intersects(query_box), std::back_inserter(result_s));
     return result_s;
 }
@@ -148,17 +148,17 @@ int city::get_city_id(const char* name) const {
     return -1;
 }
 
-city_object_public::point_t city::get_city_point(int id) const {
+city_object::point_t city::get_city_point(int id) const {
     if (id >= 0) {
         auto cit = id_point.find(id);
         if (cit != id_point.end()) {
             return cit->second;
         }
     }
-    return city_object_public::point_t(-1, -1);
+    return city_object::point_t(-1, -1);
 }
 
-city_object_public::point_t city::get_city_point(const char* name) const {
+city_object::point_t city::get_city_point(const char* name) const {
     auto id = get_city_id(name);
     return get_city_point(id);
 }
@@ -166,7 +166,7 @@ city_object_public::point_t city::get_city_point(const char* name) const {
 int city::get_nearest_two(const xy32& pos, int& id1, std::string& name1, int& id2, std::string& name2) const {
     id1 = -1;
     id2 = -1;
-    city_object_public::point_t p = { boost::numeric_cast<int>(pos.x), boost::numeric_cast<int>(pos.y) };
+    city_object::point_t p = { boost::numeric_cast<int>(pos.x), boost::numeric_cast<int>(pos.y) };
     int count = 0;
     for (auto it = rtree_ptr->qbegin(bgi::nearest(p, 2)); it != rtree_ptr->qend(); it++) {
         if (count == 0) {
@@ -203,7 +203,7 @@ void city::update_chunk_key_ts(int xc0, int yc0) {
 }
 
 int city::spawn(const char* name, int xc0, int yc0) {
-    city_object_public::point_t new_port_point{ xc0, yc0 };
+    city_object::point_t new_port_point{ xc0, yc0 };
     if (rtree_ptr->qbegin(bgi::intersects(new_port_point)) != rtree_ptr->qend()) {
         // already exists
         return -1;
@@ -268,7 +268,7 @@ long long city::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
 }
 
 const char* city::query_single_cell(int xc0, int yc0, int& id) const {
-    const auto city_it = rtree_ptr->qbegin(bgi::intersects(city_object_public::point_t{ xc0, yc0 }));
+    const auto city_it = rtree_ptr->qbegin(bgi::intersects(city_object::point_t{ xc0, yc0 }));
     if (city_it != rtree_ptr->qend()) {
         id = city_it->second;
         return get_city_name(city_it->second);

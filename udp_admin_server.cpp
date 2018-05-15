@@ -1,11 +1,11 @@
 #include "precompiled.hpp"
-#include "udp-admin-server.hpp"
+#include "udp_admin_server.hpp"
 #include "sea.hpp"
 #include "lz4.h"
 #include "sea_static.hpp"
 #include "xy.hpp"
 #include "seaport.hpp"
-#include "udp-server.hpp"
+#include "udp_server.hpp"
 using namespace ss;
 
 typedef struct _LWPTTLFULLSTATEOBJECT {

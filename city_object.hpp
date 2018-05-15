@@ -6,7 +6,7 @@ namespace ss {
     namespace bgm = boost::geometry::model;
     namespace bgi = boost::geometry::index;
 
-    struct city_object_public {
+    struct city_object {
         typedef bgm::point<int, 2, bg::cs::cartesian> point_t;
         typedef bgm::box<point_t> box_t; // only for query
         typedef std::pair<point_t, int> value_t;
@@ -20,7 +20,7 @@ namespace ss {
         int id;
         int population;
 
-        city_object_public(const value_t& v, int population)
+        city_object(const value_t& v, int population)
             : x0(v.first.get<0>())
             , y0(v.first.get<1>())
             , id(v.second)

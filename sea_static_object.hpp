@@ -6,7 +6,7 @@ namespace ss {
     namespace bgm = boost::geometry::model;
     namespace bgi = boost::geometry::index;
 
-    struct sea_static_object_public {
+    struct sea_static_object {
         typedef bgm::point<int, 2, bg::cs::cartesian> point_t;
         typedef bgm::box<point_t> box_t;
         typedef std::pair<box_t, int> value_t;
@@ -19,7 +19,7 @@ namespace ss {
         int x0, y0;
         int x1, y1;
 
-        sea_static_object_public(const value_t& v) :
+        sea_static_object(const value_t& v) :
             x0(v.first.min_corner().get<0>()),
             y0(v.first.min_corner().get<1>()),
             x1(v.first.max_corner().get<0>()),

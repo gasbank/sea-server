@@ -1,5 +1,5 @@
 #include "precompiled.hpp"
-#include "udp-server.hpp"
+#include "udp_server.hpp"
 #include "sea.hpp"
 #include "sea_static.hpp"
 #include "seaport.hpp"
@@ -454,7 +454,7 @@ void udp_server::send_city_cell_aligned(int xc0_aligned, int yc0_aligned, float 
     reply->view_scale = view_scale;
     size_t reply_obj_index = 0;
     const int view_scale_msb_index = msb_index(view_scale);
-    for (city_object_public const& v : sop_list) {
+    for (city_object const& v : sop_list) {
         reply->obj[reply_obj_index].x_scaled_offset_0 = aligned_scaled_offset(v.x0, xc0_aligned, view_scale, view_scale_msb_index, false, 0, 0);
         reply->obj[reply_obj_index].y_scaled_offset_0 = aligned_scaled_offset(v.y0, yc0_aligned, view_scale, view_scale_msb_index, false, 0, 0);
         reply->obj[reply_obj_index].population_level = boost::numeric_cast<unsigned char>(v.population >> 17);

@@ -1,5 +1,5 @@
 #pragma once
-#include "sea-object.hpp"
+#include "sea_object.hpp"
 
 namespace ss {
     namespace bg = boost::geometry;
