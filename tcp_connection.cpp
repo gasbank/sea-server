@@ -9,7 +9,7 @@ static std::string make_daytime_string() {
     return ctime(&now);
 }
 
-tcp_connection::pointer tcp_connection::create(boost::asio::io_service & io_service) {
+tcp_connection::pointer tcp_connection::create(boost::asio::io_service& io_service) {
     return pointer(new tcp_connection(io_service));
 }
 
@@ -28,7 +28,7 @@ void tcp_connection::start() {
                                          boost::asio::placeholders::bytes_transferred));
 }
 
-tcp_connection::tcp_connection(boost::asio::io_service & io_service)
+tcp_connection::tcp_connection(boost::asio::io_service& io_service)
     : socket_(io_service) {
 }
 

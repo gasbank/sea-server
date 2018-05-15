@@ -14,7 +14,7 @@ using namespace ss;
 const auto update_interval = boost::posix_time::milliseconds(75);
 //const auto update_interval = boost::posix_time::milliseconds(250);
 
-udp_server::udp_server(boost::asio::io_service & io_service,
+udp_server::udp_server(boost::asio::io_service& io_service,
                        std::shared_ptr<sea> sea,
                        std::shared_ptr<sea_static> sea_static,
                        std::shared_ptr<seaport> seaport,

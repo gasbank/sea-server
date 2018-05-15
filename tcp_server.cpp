@@ -3,7 +3,7 @@
 
 using namespace ss;
 
-tcp_server::tcp_server(boost::asio::io_service & io_service)
+tcp_server::tcp_server(boost::asio::io_service& io_service)
     : acceptor_(io_service, tcp::endpoint(tcp::v4(), 53200)) {
     start_accept();
 }

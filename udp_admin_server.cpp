@@ -16,7 +16,7 @@ static std::string make_daytime_string() {
     return ctime(&now);
 }
 
-udp_admin_server::udp_admin_server(boost::asio::io_service & io_service,
+udp_admin_server::udp_admin_server(boost::asio::io_service& io_service,
                                    std::shared_ptr<sea> sea,
                                    std::shared_ptr<sea_static> sea_static,
                                    std::shared_ptr<seaport> seaport,
