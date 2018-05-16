@@ -88,6 +88,7 @@ struct spawn_ship_command {
     int port1_id;
     int port2_id;
     int new_spawn;
+    int reply_id;
 };
 
 struct spawn_ship_command_reply {
@@ -95,6 +96,8 @@ struct spawn_ship_command_reply {
     int ship_id;
     int port1_id;
     int port2_id;
+    int routed;
+    int reply_id;
 };
 
 struct delete_ship_command {
@@ -109,12 +112,14 @@ struct spawn_port_command {
     int xc;
     int yc;
     int owner_id;
+    int reply_id;
 };
 
 struct spawn_port_command_reply {
     command _;
     int id; // DB key
     int port_id; // Sea-server key
+    int reply_id;
 };
 
 struct name_port_command {
@@ -164,10 +169,19 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             LOGI("Spawn Ship type: %1%", static_cast<int>(cp->type));
             const spawn_ship_command* spawn = reinterpret_cast<spawn_ship_command*>(recv_buffer_.data());;
             xy32 spawn_pos = { static_cast<int>(spawn->x), static_cast<int>(spawn->y) };
+            spawn_ship_command_reply reply;
+            memset(&reply, 0, sizeof(spawn_ship_command_reply));
+            reply._.type = 1;
+            reply.ship_id = spawn->id;
+            reply.port1_id = -1;
+            reply.port2_id = -1;
+            reply.reply_id = spawn->reply_id;
             if (sea_static_->is_water(spawn_pos)) {
                 int id = sea_->spawn(spawn->id, spawn->x, spawn->y, 1, 1);
                 int id1 = spawn->port1_id;
                 int id2 = spawn->port2_id;
+                reply.port1_id = id1;
+                reply.port2_id = id2;
                 bool new_spawn = false;
                 if (spawn->port1_id == -1 || spawn->port2_id == -1) {
                     std::string port1, port2;
@@ -181,18 +195,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                     }
                 }
                 if (id1 >= 0 && id2 >= 0 && udp_server_.set_route(id, id1, id2)) {
-                    spawn_ship_command_reply reply;
-                    memset(&reply, 0, sizeof(spawn_ship_command_reply));
-                    reply._.type = 1;
-                    reply.ship_id = spawn->id;
-                    reply.port1_id = id1;
-                    reply.port2_id = id2;
-                    if (new_spawn || spawn->new_spawn) {
-                        socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_ship_command_reply)), remote_endpoint_,
-                                              boost::bind(&udp_admin_server::handle_send, this,
-                                                          boost::asio::placeholders::error,
-                                                          boost::asio::placeholders::bytes_transferred));
-                    }
+                    reply.routed = 1;
                 } else {
                     LOGE("Cannot get nearest two ports! port1_id=%1%, port2_id=%2%",
                          id1,
@@ -203,6 +206,10 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                      spawn_pos.x,
                      spawn_pos.y);
             }
+            socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_ship_command_reply)), remote_endpoint_,
+                                  boost::bind(&udp_admin_server::handle_send, this,
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred));
             break;
         }
         case 5: // Delete Ship
@@ -219,6 +226,12 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
             LOGI("Spawn Port type: %1%", static_cast<int>(cp->type));
             const spawn_port_command* spawn = reinterpret_cast<spawn_port_command*>(recv_buffer_.data());;
             xy32 spawn_pos = { spawn->xc, spawn->yc };
+            spawn_port_command_reply reply;
+            memset(&reply, 0, sizeof(spawn_port_command_reply));
+            reply._.type = 4;
+            reply.port_id = -1;
+            reply.id = spawn->id;
+            reply.reply_id = spawn->reply_id;
             if (sea_static_->is_water(spawn_pos)) {
                 int id = seaport_->spawn(spawn->name, spawn->xc, spawn->yc, spawn->owner_id);
                 if (id >= 0) {
@@ -227,15 +240,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                          spawn_pos.x,
                          spawn_pos.y,
                          spawn->owner_id);
-                    spawn_port_command_reply reply;
-                    memset(&reply, 0, sizeof(spawn_port_command_reply));
-                    reply._.type = 4;
-                    reply.id = spawn->id;
                     reply.port_id = id;
-                    socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_port_command_reply)), remote_endpoint_,
-                                            boost::bind(&udp_admin_server::handle_send, this,
-                                                        boost::asio::placeholders::error,
-                                                        boost::asio::placeholders::bytes_transferred));
                 } else {
                     LOGE("New port cannot be spawned at (x=%1%, y=%2%)",
                          spawn_pos.x,
@@ -246,6 +251,10 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
                      spawn_pos.x,
                      spawn_pos.y);
             }
+            socket_.async_send_to(boost::asio::buffer(&reply, sizeof(spawn_port_command_reply)), remote_endpoint_,
+                                  boost::bind(&udp_admin_server::handle_send, this,
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::bytes_transferred));
             break;
         }
         case 7: // Name Port
