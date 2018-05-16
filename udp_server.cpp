@@ -650,9 +650,18 @@ void udp_server::send_single_cell(int xc0, int yc0) {
     // seaport details
     int seaport_id = -1;
     int seaport_cargo = 0;
-    auto seaport_name = seaport_->query_single_cell(xc0, yc0, seaport_id, seaport_cargo);
+    int seaport_cargo_loaded = 0;
+    int seaport_cargo_unloaded = 0;
+    auto seaport_name = seaport_->query_single_cell(xc0,
+                                                    yc0,
+                                                    seaport_id,
+                                                    seaport_cargo,
+                                                    seaport_cargo_loaded,
+                                                    seaport_cargo_unloaded);
     reply->port_id = seaport_id;
     reply->cargo = seaport_cargo;
+    reply->cargo_loaded = seaport_cargo_loaded;
+    reply->cargo_unloaded = seaport_cargo_unloaded;
     if (seaport_id >= 0 && seaport_name) {
         strncpy(reply->port_name, seaport_name, boost::size(reply->port_name));
         reply->port_name[boost::size(reply->port_name) - 1] = 0;

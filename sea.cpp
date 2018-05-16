@@ -291,6 +291,7 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
                      x,
                      y,
                      unloaded_cargo);
+                sp->add_cargo(r->get_seaport2_id(), unloaded_cargo, false);
                 obj->set_state(SOS_LOADING);
                 const auto loading_time = boost::posix_time::milliseconds(5000);
                 t->expires_at(t->expires_at() + loading_time);
@@ -307,7 +308,7 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
                             LOGE("Cannot find sea object with ID %1%", id);
                             return;
                         }
-                        const auto loaded_cargo = sp->remove_cargo(r->get_seaport2_id(), 10);
+                        const auto loaded_cargo = sp->remove_cargo(r->get_seaport2_id(), 10, false);
                         float x, y;
                         obj->get_xy(x, y);
                         obj->add_cargo(loaded_cargo, 

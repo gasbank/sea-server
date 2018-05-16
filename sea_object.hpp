@@ -35,7 +35,7 @@ namespace ss {
             , state(SOS_NOT_SET)
             , remain_loading_time(0)
             , cargo(0)
-            , cargo_origin_seaport_id(0)
+            , cargo_origin_seaport_id(-1)
             , cargo_origin_xy({ 0,0 }) {
         }
         sea_object(int id, int type, float fx, float fy, float fw, float fh, const value& rtree_value)
@@ -51,7 +51,7 @@ namespace ss {
             , state(SOS_SAILING)
             , remain_loading_time(0)
             , cargo(0)
-            , cargo_origin_seaport_id(0)
+            , cargo_origin_seaport_id(-1)
             , cargo_origin_xy({ 0,0 }) {
         }
         void fill_sop(sea_object& sop) const {

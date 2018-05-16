@@ -284,7 +284,7 @@ void city::generate_cargo() {
             const auto total_cargo = 10.0f;
             const auto cargo = std::max(1, boost::math::iround(total_cargo / seaports.size()));
             for (const auto sop : seaports) {
-                seaport_->add_cargo(sop.id, cargo);
+                seaport_->add_cargo(sop.id, cargo, true);
             }
         }
     }

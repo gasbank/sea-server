@@ -163,11 +163,14 @@ void seaport::update_single_chunk_key_ts(const LWTTLCHUNKKEY& chunk_key, long lo
     }
 }
 
-int seaport::spawn(const char* name, int xc0, int yc0, int owner_id) {
+int seaport::spawn(const char* name, int xc0, int yc0, int owner_id, bool& existing) {
+    existing = false;
     seaport_object::point new_port_point{ xc0, yc0 };
-    if (rtree_ptr->qbegin(bgi::intersects(new_port_point)) != rtree_ptr->qend()) {
-        // already exists
-        return -1;
+    const auto existing_it = rtree_ptr->qbegin(bgi::intersects(new_port_point));
+    if (existing_it != rtree_ptr->qend()) {
+        // already exists; return the existing one
+        existing = true;
+        return existing_it->second;
     }
 
     const auto id = static_cast<int>(rtree_ptr->size());
@@ -232,7 +235,7 @@ long long seaport::query_ts(const LWTTLCHUNKKEY& chunk_key) const {
     return 0;
 }
 
-const char* seaport::query_single_cell(int xc0, int yc0, int& id, int& cargo) const {
+const char* seaport::query_single_cell(int xc0, int yc0, int& id, int& cargo, int& cargo_loaded, int& cargo_unloaded) const {
     const auto seaport_it = rtree_ptr->qbegin(bgi::intersects(seaport_object::point{ xc0, yc0 }));
     if (seaport_it != rtree_ptr->qend()) {
         id = seaport_it->second;
@@ -242,6 +245,18 @@ const char* seaport::query_single_cell(int xc0, int yc0, int& id, int& cargo) co
         } else {
             cargo = 0;
         }
+        const auto cargo_loaded_it = id_cargo_loaded.find(id);
+        if (cargo_loaded_it != id_cargo_loaded.end()) {
+            cargo_loaded = cargo_loaded_it->second;
+        } else {
+            cargo_loaded = 0;
+        }
+        const auto cargo_unloaded_it = id_cargo_unloaded.find(id);
+        if (cargo_unloaded_it != id_cargo_unloaded.end()) {
+            cargo_unloaded = cargo_unloaded_it->second;
+        } else {
+            cargo_unloaded = 0;
+        }
         return get_seaport_name(seaport_it->second);
     }
     id = -1;
@@ -249,7 +264,7 @@ const char* seaport::query_single_cell(int xc0, int yc0, int& id, int& cargo) co
     return nullptr;
 }
 
-int seaport::add_cargo(int id, int amount) {
+int seaport::add_cargo(int id, int amount, bool source) {
     if (amount < 0) {
         amount = 0;
     }
@@ -266,11 +281,16 @@ int seaport::add_cargo(int id, int amount) {
     if (after > MAX_CARGO) {
         after = MAX_CARGO;
     }
-    id_cargo[id] = after;
-    return after - before;
+    const auto actual_added = after - before;
+    if (source) {
+        id_cargo[id] = after;
+    } else {
+        id_cargo_unloaded[id] += actual_added;
+    }
+    return actual_added;
 }
 
-int seaport::remove_cargo(int id, int amount) {
+int seaport::remove_cargo(int id, int amount, bool sink) {
     if (amount < 0) {
         amount = 0;
     }
@@ -288,7 +308,11 @@ int seaport::remove_cargo(int id, int amount) {
         after = 0;
     }
     id_cargo[id] = after;
-    return before - after;
+    const auto actual_removed = before - after;
+    if (sink == false) {
+        id_cargo_loaded[id] += actual_removed;
+    }
+    return actual_removed;
 }
 
 int seaport::get_owner_id(int id) const {
