@@ -7,6 +7,8 @@
 
 using namespace ss;
 
+const auto update_interval = boost::posix_time::milliseconds(1000);
+
 typedef struct _LWTTLDATA_SEAPORT {
     char name[80]; // maximum length from crawling data: 65
     char locode[8]; // fixed length of 5
@@ -14,13 +16,14 @@ typedef struct _LWTTLDATA_SEAPORT {
     float lng;
 } LWTTLDATA_SEAPORT;
 
-seaport::seaport()
+seaport::seaport(boost::asio::io_service& io_service)
     : file(bi::open_or_create, SEAPORT_RTREE_FILENAME, SEAPORT_RTREE_MMAP_MAX_SIZE)
     , alloc(file.get_segment_manager())
     , rtree_ptr(file.find_or_construct<seaport_object::rtree>("rtree")(seaport_object::params(), seaport_object::indexable(), seaport_object::equal_to(), alloc))
     , res_width(WORLD_MAP_PIXEL_RESOLUTION_WIDTH)
     , res_height(WORLD_MAP_PIXEL_RESOLUTION_HEIGHT)
-    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width) {
+    , km_per_cell(WORLD_CIRCUMFERENCE_IN_KM / res_width)
+    , timer_(io_service, update_interval) {
     boost::interprocess::file_mapping seaport_file("assets/ttldata/seaports.dat", boost::interprocess::read_only);
     boost::interprocess::mapped_region region(seaport_file, boost::interprocess::read_only);
     LWTTLDATA_SEAPORT* sp = reinterpret_cast<LWTTLDATA_SEAPORT*>(region.get_address());
@@ -65,6 +68,8 @@ seaport::seaport()
              rtree_ptr->size());
         abort();
     }
+
+    timer_.async_wait(boost::bind(&seaport::update, this));
 }
 
 int seaport::lng_to_xc(float lng) const {
@@ -204,10 +209,12 @@ void seaport::despawn(int id) {
     update_chunk_key_ts(xc0, yc0);
 
     rtree_ptr->remove(std::make_pair(it->second, id));
-    id_point.erase(it);
     id_name.erase(id);
-    id_owner_id.erase(id);
+    id_point.erase(it);
     id_cargo.erase(id);
+    id_cargo_loaded.erase(id);
+    id_cargo_unloaded.erase(id);
+    id_owner_id.erase(id);
 }
 
 void seaport::set_name(int id, const char* name, int owner_id) {
@@ -321,4 +328,25 @@ int seaport::get_owner_id(int id) const {
         return it->second;
     }
     return 0;
+}
+
+void seaport::update() {
+    float delta_time = update_interval.total_milliseconds() / 1000.0f;
+
+    timer_.expires_at(timer_.expires_at() + update_interval);
+    timer_.async_wait(boost::bind(&seaport::update, this));
+
+    convert_cargo();
+}
+
+void seaport::convert_cargo() {
+    // iterate all seaports
+    const auto bounds = rtree_ptr->bounds();
+    for (auto it = rtree_ptr->qbegin(bgi::intersects(bounds)); it != rtree_ptr->qend(); it++) {
+        const auto unloaded = id_cargo_unloaded[it->second];
+        if (unloaded > 0) {
+            id_cargo_unloaded[it->second]--;
+            id_cargo[it->second]++;
+        }
+    }
 }

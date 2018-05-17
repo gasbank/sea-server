@@ -214,7 +214,7 @@ std::vector<int> sea::query_tree(float xc, float yc, float ex_lng, float ex_lat)
 }
 
 void sea::update(float delta_time) {
-    for(const auto& it : sea_guid_to_id) {
+    for (const auto& it : sea_guid_to_id) {
         const auto& it2 = sea_objects.find(it.second);
         if (it2 != sea_objects.cend()) {
             float vx = 0, vy = 0;
@@ -266,12 +266,12 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
         float x, y;
         obj->get_xy(x, y);
         const auto unloading_time = boost::posix_time::milliseconds(5000);
-        LOGI("S %1% {%2%,%3%}: start unloading from SP %4%... (%5% ms)",
-             id,
-             x,
-             y,
-             r->get_seaport2_id(),
-             unloading_time.total_milliseconds());
+        LOGIx("S %1% {%2%,%3%}: start unloading from SP %4%... (%5% ms)",
+              id,
+              x,
+              y,
+              r->get_seaport2_id(),
+              unloading_time.total_milliseconds());
         std::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(io_service, unloading_time));
         t->async_wait([this, id, t, sp, r](const boost::system::error_code& error) {
             if (!error) {
@@ -284,23 +284,23 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
                 obj->get_xy(x, y);
                 const auto unloaded_cargo = obj->remove_cargo(MAX_CARGO,
                                                               r->get_seaport2_id(),
-                                                              xy32{static_cast<int>(x), static_cast<int>(y)}
+                                                              xy32{ static_cast<int>(x), static_cast<int>(y) }
                 );
-                LOGI("S %1% {%2%,%3%}: unloading finished. %4% cargo(s) unloaded.",
-                     id,
-                     x,
-                     y,
-                     unloaded_cargo);
+                LOGIx("S %1% {%2%,%3%}: unloading finished. %4% cargo(s) unloaded.",
+                      id,
+                      x,
+                      y,
+                      unloaded_cargo);
                 sp->add_cargo(r->get_seaport2_id(), unloaded_cargo, false);
                 obj->set_state(SOS_LOADING);
                 const auto loading_time = boost::posix_time::milliseconds(5000);
                 t->expires_at(t->expires_at() + loading_time);
-                LOGI("S %1% {%2%,%3%}: start loading from SP %4%... (%5% ms)",
-                     id,
-                     x,
-                     y,
-                     r->get_seaport2_id(),
-                     loading_time.total_milliseconds());
+                LOGIx("S %1% {%2%,%3%}: start loading from SP %4%... (%5% ms)",
+                      id,
+                      x,
+                      y,
+                      r->get_seaport2_id(),
+                      loading_time.total_milliseconds());
                 t->async_wait([this, id, t, sp, r](const boost::system::error_code& error) {
                     if (!error) {
                         auto obj = get_object(id);
@@ -311,22 +311,22 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
                         const auto loaded_cargo = sp->remove_cargo(r->get_seaport2_id(), 10, false);
                         float x, y;
                         obj->get_xy(x, y);
-                        obj->add_cargo(loaded_cargo, 
+                        obj->add_cargo(loaded_cargo,
                                        r->get_seaport2_id(),
                                        xy32{ static_cast<int>(x), static_cast<int>(y) });
-                        
-                        LOGI("S %1% {%2%,%3%}: loading finished. %4% cargo(s) loaded.",
-                             id,
-                             x,
-                             y,
-                             loaded_cargo);
+
+                        LOGIx("S %1% {%2%,%3%}: loading finished. %4% cargo(s) loaded.",
+                              id,
+                              x,
+                              y,
+                              loaded_cargo);
                         uas->send_arrival(obj->get_type());
                         // reversing the route
                         r->reverse();
-                        LOGI("S %1% {%2%,%3%}: reversing the route.",
-                             id,
-                             x,
-                             y);
+                        LOGIx("S %1% {%2%,%3%}: reversing the route.",
+                              id,
+                              x,
+                              y);
                         // sail again
                         obj->set_state(SOS_SAILING);
                     } else {
