@@ -59,5 +59,6 @@ namespace ss {
         std::shared_ptr<city> city_;
         std::unordered_map<int, std::shared_ptr<route> > route_map_; // id -> route
         int tick_seq_;
+        std::map<udp::endpoint, std::chrono::steady_clock::duration> client_endpoints_;
     };
 }

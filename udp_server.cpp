@@ -59,6 +59,17 @@ void udp_server::update() {
     for (auto v : remove_keys) {
         route_map_.erase(v);
     }
+    const auto now = get_monotonic_uptime_duration();
+    std::vector<udp::endpoint> to_be_removed;
+    for (const auto& e : client_endpoints_) {
+        if (now - e.second > std::chrono::seconds(3)) {
+            to_be_removed.emplace_back(e.first);
+        }
+    }
+    for (const auto& tbr : to_be_removed) {
+        client_endpoints_.erase(tbr);
+        LOGI("Client endpoint %1% removed for timeout.", tbr);
+    }
 }
 
 void udp_server::start_receive() {
@@ -508,6 +519,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                 // tracking info
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id);
             }
+            client_endpoints_[remote_endpoint_] = get_monotonic_uptime_duration();
         } else if (type == 116) {
             // LPGP_LWPTTLREQUESTWAYPOINTS
             LOGIx("REQUESTWAYPOINTS received.");
