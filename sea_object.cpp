@@ -72,8 +72,8 @@ int sea_object::remove_cargo(int amount, int cargo_destination_seaport_id, const
 void sea_object::fill_packet(LWPTTLFULLSTATEOBJECT& p) const {
     p.fx0 = fx;
     p.fy0 = fy;
-    p.fx1 = fx + fw;
-    p.fy1 = fy + fh;
+    //p.fx1 = fx + fw;
+    //p.fy1 = fy + fh;
     p.fvx = fvx;
     p.fvy = fvy;
     p.id = id;

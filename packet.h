@@ -6,7 +6,7 @@
 // UDP
 typedef struct _LWPTTLFULLSTATEOBJECT {
     float fx0, fy0;
-    float fx1, fy1;
+    //float fx1, fy1;
     float fvx, fvy;
     int id;
     int type;
