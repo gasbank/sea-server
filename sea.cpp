@@ -296,7 +296,8 @@ bool sea::update_route(float delta_time,
                       y,
                       unloaded_cargo);
                 sp->add_cargo(r->get_seaport2_id(), unloaded_cargo, false);
-                us->notify_to_client_gold_earned();
+                const auto sp_point = sp->get_seaport_point(r->get_seaport2_id());
+                us->notify_to_client_gold_earned(sp_point.get<0>(), sp_point.get<1>(), 1);
                 obj->set_state(SOS_LOADING);
                 const auto loading_time = boost::posix_time::milliseconds(5000);
                 t->expires_at(t->expires_at() + loading_time);

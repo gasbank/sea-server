@@ -21,8 +21,7 @@ namespace ss {
                    std::shared_ptr<region> region,
                    std::shared_ptr<city> city);
         bool set_route(int id, int seaport_id1, int seaport_id2);
-        void notify_to_client_gold_earned();
-        void start_update();
+        void notify_to_client_gold_earned(int xc, int yc, int amount);
     private:
         void update();
         void start_receive();

@@ -718,9 +718,12 @@ void udp_server::remove_expired_endpoints() {
     }
 }
 
-void udp_server::notify_to_client_gold_earned() {
+void udp_server::notify_to_client_gold_earned(int xc, int yc, int amount) {
     std::shared_ptr<LWPTTLGOLDEARNED> reply(new LWPTTLGOLDEARNED);
     memset(reply.get(), 0, sizeof(LWPTTLGOLDEARNED));
     reply->type = 124; // LPGP_LWPTTLGOLDEARNED
+    reply->xc0 = xc;
+    reply->yc0 = yc;
+    reply->amount = amount;
     notify_to_client(reply);
 }
