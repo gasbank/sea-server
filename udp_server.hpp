@@ -63,7 +63,7 @@ namespace ss {
         }
         udp::socket socket_;
         udp::endpoint remote_endpoint_;
-        boost::array<char, 1024> recv_buffer_;
+        std::array<char, 1024> recv_buffer_;
         boost::asio::deadline_timer timer_;
         std::shared_ptr<sea> sea_;
         std::shared_ptr<sea_static> sea_static_;

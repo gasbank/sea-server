@@ -2,7 +2,7 @@
 namespace ss {
     using boost::asio::ip::tcp;
 
-    class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
+    class tcp_connection : public std::enable_shared_from_this<tcp_connection> {
     public:
         typedef std::shared_ptr<tcp_connection> pointer;
 
@@ -22,6 +22,6 @@ namespace ss {
         void do_read_float2();
         tcp::socket socket_;
         std::string message_;
-        boost::array<char, 1024> recv_buffer_;
+        std::array<char, 1024> recv_buffer_;
     };
 }

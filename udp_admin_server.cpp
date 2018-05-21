@@ -289,7 +289,7 @@ void udp_admin_server::handle_receive(const boost::system::error_code& error, st
 }
 
 void udp_admin_server::send_recover_all_ships() {
-    boost::array<char, 1> send_buf = { 2 }; // RecoverAllShips
+    std::array<char, 1> send_buf = { 2 }; // RecoverAllShips
     web_server_socket_.send_to(boost::asio::buffer(send_buf), web_server_endpoint_);
 }
 
