@@ -1,4 +1,5 @@
 #pragma once
+#include "lz4.h"
 
 namespace ss {
     namespace bg = boost::geometry;
@@ -11,7 +12,7 @@ namespace ss {
     class region;
     class city;
 
-    class udp_server : std::enable_shared_from_this<udp_server> {
+    class udp_server {
 
     public:
         udp_server(boost::asio::io_service& io_service,

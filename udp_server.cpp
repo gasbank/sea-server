@@ -3,7 +3,6 @@
 #include "sea.hpp"
 #include "sea_static.hpp"
 #include "seaport.hpp"
-#include "lz4.h"
 #include "route.hpp"
 #include "xy.hpp"
 #include "packet.h"
