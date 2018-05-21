@@ -221,6 +221,14 @@ typedef struct _LWPTTLCITYSTATE {
     int count;
     LWPTTLCITYOBJECT obj[128];
 } LWPTTLCITYSTATE;
+
+// UDP
+typedef struct _LWPTTLGOLDEARNED {
+    unsigned char type;
+    unsigned char padding0;
+    unsigned char padding1;
+    unsigned char padding2;
+} LWPTTLGOLDEARNED;
 /*
 * END: should sync with packet.h in sea-server
 */

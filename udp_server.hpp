@@ -11,7 +11,7 @@ namespace ss {
     class region;
     class city;
 
-    class udp_server {
+    class udp_server : std::enable_shared_from_this<udp_server> {
 
     public:
         udp_server(boost::asio::io_service& io_service,
@@ -21,6 +21,8 @@ namespace ss {
                    std::shared_ptr<region> region,
                    std::shared_ptr<city> city);
         bool set_route(int id, int seaport_id1, int seaport_id2);
+        void notify_to_client_gold_earned();
+        void start_update();
     private:
         void update();
         void start_receive();
@@ -36,18 +38,29 @@ namespace ss {
         void send_waypoints(int ship_id);
         std::shared_ptr<const route> find_route_map_by_ship_id(int ship_id) const;
         void send_single_cell(int xc0, int yc0);
-
-        // How to test handle_receive():
-        // $ perl -e "print pack('ff',10.123,20.456)" > /dev/udp/127.0.0.1/3100
-
-        void handle_receive(const boost::system::error_code& error,
-                            std::size_t bytes_transferred);
-
-        void handle_send(const boost::system::error_code& error,
-                         std::size_t bytes_transferred);
-
+        void handle_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
+        void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred);
         std::shared_ptr<route> create_route_id(const std::vector<int>& seaport_id_list) const;
-
+        void register_client_endpoint();
+        void remove_expired_endpoints();
+        template<typename T> void notify_to_client(std::shared_ptr<T> packet) {
+            char compressed[1500];
+            int compressed_size = LZ4_compress_default((char*)packet.get(), compressed, sizeof(T), static_cast<int>(boost::size(compressed)));
+            if (compressed_size > 0) {
+                for (auto it : client_endpoints_) {
+                    socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
+                                          it.first,
+                                          boost::bind(&udp_server::handle_send,
+                                                      this,
+                                                      boost::asio::placeholders::error,
+                                                      boost::asio::placeholders::bytes_transferred));
+                }
+            } else {
+                LOGE("%1%: LZ4_compress_default() error! - %2%",
+                     __func__,
+                     compressed_size);
+            }
+        }
         udp::socket socket_;
         udp::endpoint remote_endpoint_;
         boost::array<char, 1024> recv_buffer_;

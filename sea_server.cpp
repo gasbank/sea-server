@@ -39,12 +39,12 @@ int main() {
         std::shared_ptr<region> region_instance(new region());
         std::shared_ptr<city> city_instance(new city(io_service,
                                                      seaport_instance));
-        udp_server udp_server_instance(io_service,
-                                       sea_instance,
-                                       sea_static_instance,
-                                       seaport_instance,
-                                       region_instance,
-                                       city_instance);
+        std::shared_ptr<udp_server> udp_server_instance(new udp_server(io_service,
+                                                                       sea_instance,
+                                                                       sea_static_instance,
+                                                                       seaport_instance,
+                                                                       region_instance,
+                                                                       city_instance));
         tcp_server tcp_server_instance(io_service);
         std::shared_ptr<udp_admin_server> udp_admin_server_instance(new udp_admin_server(io_service,
                                                                                          sea_instance,

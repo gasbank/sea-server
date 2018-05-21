@@ -51,7 +51,11 @@ void udp_server::update() {
     sea_->update(delta_time);
     std::vector<int> remove_keys;
     for (auto v : route_map_) {
-        if (sea_->update_route(delta_time, v.first, v.second, seaport_) == false) {
+        if (sea_->update_route(delta_time,
+                               v.first,
+                               v.second,
+                               seaport_,
+                               this) == false) {
             // no more valid 'v'
             remove_keys.push_back(v.first);
         }
@@ -59,17 +63,7 @@ void udp_server::update() {
     for (auto v : remove_keys) {
         route_map_.erase(v);
     }
-    const auto now = get_monotonic_uptime_duration();
-    std::vector<udp::endpoint> to_be_removed;
-    for (const auto& e : client_endpoints_) {
-        if (now - e.second > std::chrono::seconds(3)) {
-            to_be_removed.emplace_back(e.first);
-        }
-    }
-    for (const auto& tbr : to_be_removed) {
-        client_endpoints_.erase(tbr);
-        LOGI("Client endpoint %1% removed for timeout.", tbr);
-    }
+    remove_expired_endpoints();
 }
 
 void udp_server::start_receive() {
@@ -93,7 +87,7 @@ void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_la
     std::vector<sea_object> sop_list;
     sea_->query_near_lng_lat_to_packet(lng, lat, ex_lng * view_scale, ex_lat * view_scale, sop_list);
 
-    boost::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
+    std::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
     reply->type = 109; // LPGP_LWPTTLFULLSTATE
     size_t reply_obj_index = 0;
@@ -165,7 +159,7 @@ void udp_server::send_land_cell_aligned(int xc0_aligned, int yc0_aligned, float 
     const auto xchi = +half_lng_cell_pixel_extent;
     const auto yclo = -half_lat_cell_pixel_extent;
     const auto ychi = +half_lat_cell_pixel_extent;
-    boost::shared_ptr<LWPTTLSTATICSTATE2> reply(new LWPTTLSTATICSTATE2);
+    std::shared_ptr<LWPTTLSTATICSTATE2> reply(new LWPTTLSTATICSTATE2);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE2));
     reply->type = 115; // LPGP_LWPTTLSTATICSTATE2
     reply->ts = 1;
@@ -250,7 +244,7 @@ void udp_server::send_land_cell_aligned_bitmap(int xc0_aligned, int yc0_aligned,
     const auto xchi = +half_lng_cell_pixel_extent;
     const auto yclo = -half_lat_cell_pixel_extent;
     const auto ychi = +half_lat_cell_pixel_extent;
-    boost::shared_ptr<LWPTTLSTATICSTATE3> reply(new LWPTTLSTATICSTATE3);
+    std::shared_ptr<LWPTTLSTATICSTATE3> reply(new LWPTTLSTATICSTATE3);
     memset(reply.get(), 0, sizeof(LWPTTLSTATICSTATE3));
     reply->type = 122; // LPGP_LWPTTLSTATICSTATE3
     reply->ts = 1;
@@ -327,7 +321,7 @@ void udp_server::send_track_object_coords(int track_object_id, int track_object_
              track_object_id,
              track_object_ship_id);
     }
-    boost::shared_ptr<LWPTTLTRACKCOORDS> reply(new LWPTTLTRACKCOORDS);
+    std::shared_ptr<LWPTTLTRACKCOORDS> reply(new LWPTTLTRACKCOORDS);
     memset(reply.get(), 0, sizeof(LWPTTLTRACKCOORDS));
     reply->type = 113; // LPGP_LWPTTLTRACKCOORDS
     reply->id = obj ? (track_object_id ? track_object_id : track_object_ship_id ? track_object_ship_id : 0) : 0;
@@ -356,7 +350,7 @@ void udp_server::send_waypoints(int ship_id) {
         LOGE("Ship id %1%'s route cannot be found.", ship_id);
         return;
     }
-    boost::shared_ptr<LWPTTLWAYPOINTS> reply(new LWPTTLWAYPOINTS);
+    std::shared_ptr<LWPTTLWAYPOINTS> reply(new LWPTTLWAYPOINTS);
     memset(reply.get(), 0, sizeof(LWPTTLWAYPOINTS));
     reply->type = 117; // LPGP_LWPTTLWAYPOINTS
     reply->ship_id = ship_id;
@@ -403,7 +397,7 @@ void udp_server::send_seaport_cell_aligned(int xc0_aligned, int yc0_aligned, flo
                                                    yc0_aligned,
                                                    ex_lng * view_scale,
                                                    ex_lat * view_scale);
-    boost::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
+    std::shared_ptr<LWPTTLSEAPORTSTATE> reply(new LWPTTLSEAPORTSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLSEAPORTSTATE));
     reply->type = 112; // LPGP_LWPTTLSEAPORTSTATE
     reply->ts = seaport_->query_ts(xc0_aligned, yc0_aligned, view_scale);
@@ -444,10 +438,10 @@ void udp_server::send_city_cell_aligned(int xc0_aligned, int yc0_aligned, float 
     const auto half_lng_cell_pixel_extent = boost::math::iround(ex_lng / 2.0f * view_scale);
     const auto half_lat_cell_pixel_extent = boost::math::iround(ex_lat / 2.0f * view_scale);
     auto sop_list = city_->query_near_to_packet(xc0_aligned,
-                                                   yc0_aligned,
-                                                   ex_lng * view_scale,
-                                                   ex_lat * view_scale);
-    boost::shared_ptr<LWPTTLCITYSTATE> reply(new LWPTTLCITYSTATE);
+                                                yc0_aligned,
+                                                ex_lng * view_scale,
+                                                ex_lat * view_scale);
+    std::shared_ptr<LWPTTLCITYSTATE> reply(new LWPTTLCITYSTATE);
     memset(reply.get(), 0, sizeof(LWPTTLCITYSTATE));
     reply->type = 123; // LPGP_LWPTTLCITYSTATE
     reply->ts = city_->query_ts(xc0_aligned, yc0_aligned, view_scale);
@@ -486,7 +480,7 @@ void udp_server::send_seaarea(float lng, float lat) {
     std::string area_name;
     region_->query_tree(lng, lat, area_name);
 
-    boost::shared_ptr<LWPTTLSEAAREA> reply(new LWPTTLSEAAREA);
+    std::shared_ptr<LWPTTLSEAAREA> reply(new LWPTTLSEAAREA);
     memset(reply.get(), 0, sizeof(LWPTTLSEAAREA));
     reply->type = 114; // LPGP_LWPTTLSEAAREA
     strcpy(reply->name, area_name.c_str());
@@ -519,7 +513,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
                 // tracking info
                 send_track_object_coords(p->track_object_id, p->track_object_ship_id);
             }
-            client_endpoints_[remote_endpoint_] = get_monotonic_uptime_duration();
+            register_client_endpoint();
         } else if (type == 116) {
             // LPGP_LWPTTLREQUESTWAYPOINTS
             LOGIx("REQUESTWAYPOINTS received.");
@@ -653,7 +647,7 @@ std::shared_ptr<const route> udp_server::find_route_map_by_ship_id(int ship_id) 
 }
 
 void udp_server::send_single_cell(int xc0, int yc0) {
-    boost::shared_ptr<LWPTTLSINGLECELL> reply(new LWPTTLSINGLECELL);
+    std::shared_ptr<LWPTTLSINGLECELL> reply(new LWPTTLSINGLECELL);
     memset(reply.get(), 0, sizeof(LWPTTLSINGLECELL));
     reply->type = 121; // LPGP_LWPTTLSINGLECELL
     reply->xc0 = xc0;
@@ -700,4 +694,33 @@ void udp_server::send_single_cell(int xc0, int yc0) {
              __func__,
              compressed_size);
     }
+}
+
+void udp_server::register_client_endpoint() {
+    if (client_endpoints_.find(remote_endpoint_) == client_endpoints_.end()) {
+        LOGI("Registering new client endpoint %1%...", remote_endpoint_);
+    }
+    client_endpoints_[remote_endpoint_] = get_monotonic_uptime_duration();
+}
+
+void udp_server::remove_expired_endpoints() {
+    const auto now = get_monotonic_uptime_duration();
+    std::vector<udp::endpoint> to_be_removed;
+    for (const auto& e : client_endpoints_) {
+        const auto& last_update = e.second;
+        if (now - last_update > std::chrono::seconds(3)) {
+            to_be_removed.emplace_back(e.first);
+        }
+    }
+    for (const auto& tbr : to_be_removed) {
+        LOGI("Removing client endpoint %1%... (timeout)", tbr);
+        client_endpoints_.erase(tbr);
+    }
+}
+
+void udp_server::notify_to_client_gold_earned() {
+    std::shared_ptr<LWPTTLGOLDEARNED> reply(new LWPTTLGOLDEARNED);
+    memset(reply.get(), 0, sizeof(LWPTTLGOLDEARNED));
+    reply->type = 124; // LPGP_LWPTTLGOLDEARNED
+    notify_to_client(reply);
 }

@@ -6,6 +6,7 @@ namespace ss {
     namespace bgi = boost::geometry::index;
     class route;
     class udp_admin_server;
+    class udp_server;
     class seaport;
     class sea {
         typedef bg::model::point<float, 2, bg::cs::cartesian> point;
@@ -27,7 +28,11 @@ namespace ss {
         void update(float delta_time);
         void set_object_state(int id, SEA_OBJECT_STATE state);
         SEA_OBJECT_STATE get_object_state(int id) const;
-        bool update_route(float delta_time, int id, std::shared_ptr<route> r, std::shared_ptr<seaport> sp);
+        bool update_route(float delta_time,
+                          int id,
+                          std::shared_ptr<route> r,
+                          std::shared_ptr<seaport> sp,
+                          udp_server* us);
         sea_object* get_object(int id);
         sea_object* get_object_by_type(int type);
         void set_udp_admin_server(const std::shared_ptr<udp_admin_server>& uas) { this->uas = uas; }

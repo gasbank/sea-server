@@ -3,6 +3,7 @@
 #include "route.hpp"
 #include "udp_admin_server.hpp"
 #include "seaport.hpp"
+#include "udp_server.hpp"
 using namespace ss;
 
 sea::sea(boost::asio::io_service& io_service)
@@ -233,7 +234,11 @@ void sea::update(float delta_time) {
     }
 }
 
-bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::shared_ptr<seaport> sp) {
+bool sea::update_route(float delta_time,
+                       int id,
+                       std::shared_ptr<route> r,
+                       std::shared_ptr<seaport> sp,
+                       udp_server* us) {
     if (!r) {
         // nothing to do
         return true;
@@ -273,7 +278,7 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
               r->get_seaport2_id(),
               unloading_time.total_milliseconds());
         std::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(io_service, unloading_time));
-        t->async_wait([this, id, t, sp, r](const boost::system::error_code& error) {
+        t->async_wait([this, id, t, sp, r, us](const boost::system::error_code& error) {
             if (!error) {
                 auto obj = get_object(id);
                 if (obj == nullptr) {
@@ -284,14 +289,14 @@ bool sea::update_route(float delta_time, int id, std::shared_ptr<route> r, std::
                 obj->get_xy(x, y);
                 const auto unloaded_cargo = obj->remove_cargo(MAX_CARGO,
                                                               r->get_seaport2_id(),
-                                                              xy32{ static_cast<int>(x), static_cast<int>(y) }
-                );
+                                                              xy32{ static_cast<int>(x), static_cast<int>(y) });
                 LOGIx("S %1% {%2%,%3%}: unloading finished. %4% cargo(s) unloaded.",
                       id,
                       x,
                       y,
                       unloaded_cargo);
                 sp->add_cargo(r->get_seaport2_id(), unloaded_cargo, false);
+                us->notify_to_client_gold_earned();
                 obj->set_state(SOS_LOADING);
                 const auto loading_time = boost::posix_time::milliseconds(5000);
                 t->expires_at(t->expires_at() + loading_time);
