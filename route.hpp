@@ -19,6 +19,7 @@ namespace ss {
         std::vector<xy32> clone_waypoints() const;
         int get_seaport1_id() const { return seaport1_id; }
         int get_seaport2_id() const { return seaport2_id; }
+        int get_docked_seaport_id() const;
     private:
         std::vector<float> accum_distance;
         mutable spinlock waypoints_spinlock;

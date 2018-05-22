@@ -28,7 +28,11 @@ route::route(const std::vector<xy32>& waypoints, int seaport1_id, int seaport2_i
 }
 
 void route::update(float delta_time) {
-    param += velocity * delta_time;
+    if (reversed == false) {
+        param += velocity * delta_time;
+    } else {
+        param -= velocity * delta_time;
+    }
 }
 
 route::fxfyvxvy route::get_pos(bool& finished) const {
@@ -43,12 +47,19 @@ route::fxfyvxvy route::get_pos(bool& finished) const {
         py = static_cast<float>(waypoints.begin()->y);
         dx = static_cast<float>((waypoints.begin() + 1)->x) - px;
         dy = static_cast<float>((waypoints.begin() + 1)->y) - py;
+        // begin position is finished position if reversed sailing
+        if (param <= 0 && reversed == true) {
+            finished = true;
+        }
     } else if (it == accum_distance.end()) {
         px = static_cast<float>(waypoints.rbegin()->x);
         py = static_cast<float>(waypoints.rbegin()->y);
-        dx = 0;
-        dy = 0;
-        finished = true;
+        dx = px - static_cast<float>((waypoints.rbegin() + 1)->x);
+        dy = py - static_cast<float>((waypoints.rbegin() + 1)->y);
+        // end position is finished position if ordinary sailing
+        if (reversed == false) {
+            finished = true;
+        }
     } else {
         auto it_idx = it - accum_distance.begin();
         auto wp1 = waypoints[it_idx - 1];
@@ -71,6 +82,9 @@ float route::get_left() const {
 }
 
 void route::reverse() {
+    reversed = !reversed;
+    
+    /*
     waypoints_spinlock.lock();
     std::reverse(waypoints.begin(), waypoints.end());
     reversed = !reversed;
@@ -82,6 +96,7 @@ void route::reverse() {
     param = total_length - param;
     std::swap(seaport1_id, seaport2_id);
     waypoints_spinlock.unlock();
+    */
 }
 
 std::vector<xy32> route::clone_waypoints() const {
@@ -89,4 +104,12 @@ std::vector<xy32> route::clone_waypoints() const {
     auto r = waypoints;
     waypoints_spinlock.unlock();
     return r;
+}
+
+int route::get_docked_seaport_id() const {
+    if (reversed) {
+        return seaport1_id;
+    } else {
+        return seaport2_id;
+    }
 }
