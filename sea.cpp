@@ -295,7 +295,7 @@ bool sea::update_route(float delta_time,
                       x,
                       y,
                       unloaded_cargo);
-                sp->add_cargo(r->get_seaport2_id(), unloaded_cargo, false);
+                sp->add_cargo(r->get_docked_seaport_id(), unloaded_cargo, false);
                 const auto sp_point = sp->get_seaport_point(r->get_docked_seaport_id());
                 us->notify_to_client_gold_earned(sp_point.get<0>(), sp_point.get<1>(), 1);
                 obj->set_state(SOS_LOADING);
