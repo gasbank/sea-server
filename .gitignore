@@ -7,3 +7,4 @@ cmake-build-debug
 /rtree/*.bin
 cmake-build-release
 workspace.xml
+build-xcode

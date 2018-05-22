@@ -4,7 +4,7 @@
 #include "sea_object.hpp"
 #include "xy.hpp"
 
-typedef struct _LWPTTLFULLSTATEOBJECT LWPTTLFULLSTATEOBJECT;
+typedef struct _LWPTTLDYNAMICSTATEOBJECT LWPTTLDYNAMICSTATEOBJECT;
 
 namespace ss {
     namespace bg = boost::geometry;
@@ -105,7 +105,7 @@ namespace ss {
         int add_cargo(int amount, int cargo_origin_seaport_id, const xy32& cargo_origin_xy);
         int remove_cargo(int amount, int cargo_destination_seaport_id, const xy32& cargo_destination_xy);
         int get_cargo() const { return cargo; }
-        void fill_packet(LWPTTLFULLSTATEOBJECT& p) const;
+        void fill_packet(LWPTTLDYNAMICSTATEOBJECT& p) const;
     private:
         int id;
         int type;

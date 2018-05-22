@@ -69,15 +69,9 @@ int sea_object::remove_cargo(int amount, int cargo_destination_seaport_id, const
     return before - after;
 }
 
-void sea_object::fill_packet(LWPTTLFULLSTATEOBJECT& p) const {
-    p.fx0 = fx;
-    p.fy0 = fy;
-    //p.fx1 = fx + fw;
-    //p.fy1 = fy + fh;
-    p.fvx = fvx;
-    p.fvy = fvy;
-    p.id = id;
-    p.type = type;
+void sea_object::fill_packet(LWPTTLDYNAMICSTATEOBJECT& p) const {
+    p.obj_id = id;
+    p.obj_db_id = type;
     strcpy(p.guid, guid.c_str());
     if (state == SOS_LOADING) {
         strcat(p.guid, "[LOADING]");

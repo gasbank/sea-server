@@ -4,25 +4,24 @@
 * BEGIN: should sync with packet.h in sea-server
 */
 // UDP
-typedef struct _LWPTTLFULLSTATEOBJECT {
-    float fx0, fy0;
-    //float fx1, fy1;
-    float fvx, fvy;
-    int id;
-    int type;
+typedef struct _LWPTTLDYNAMICSTATEOBJECT {
+    int obj_id;
+    int obj_db_id;
+    float route_param;
+    float route_speed;
+    int route_reversed;
     char guid[64];
-    float route_left;
-} LWPTTLFULLSTATEOBJECT;
+} LWPTTLDYNAMICSTATEOBJECT;
 
 // UDP
-typedef struct _LWPTTLFULLSTATE {
+typedef struct _LWPTTLDYNAMICSTATE {
     unsigned char type;
     unsigned char padding0;
     unsigned char padding1;
     unsigned char padding2;
     int count;
-    LWPTTLFULLSTATEOBJECT obj[64];
-} LWPTTLFULLSTATE;
+    LWPTTLDYNAMICSTATEOBJECT obj[64];
+} LWPTTLDYNAMICSTATE;
 
 // UDP
 typedef struct _LWPTTLSTATICOBJECT {

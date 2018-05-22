@@ -12,6 +12,8 @@ namespace ss {
         void set_velocity(float v) { velocity = v; }
         void update(float delta_time);
         fxfyvxvy get_pos(bool& finished) const;
+        float get_param() const { return param; }
+        int get_reversed() const { return reversed; }
         float get_left() const;
         void reverse();
         std::vector<xy32> clone_waypoints() const;
@@ -25,5 +27,6 @@ namespace ss {
         float param;
         int seaport1_id;
         int seaport2_id;
+        bool reversed;
     };
 }

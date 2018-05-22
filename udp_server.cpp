@@ -82,21 +82,25 @@ void udp_server::handle_send(const boost::system::error_code & error, std::size_
     }
 }
 
-void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
+void udp_server::send_dynamic_state(float lng, float lat, float ex_lng, float ex_lat, int view_scale) {
     std::vector<sea_object> sop_list;
     sea_->query_near_lng_lat_to_packet(lng, lat, ex_lng * view_scale, ex_lat * view_scale, sop_list);
-
-    std::shared_ptr<LWPTTLFULLSTATE> reply(new LWPTTLFULLSTATE);
-    memset(reply.get(), 0, sizeof(LWPTTLFULLSTATE));
-    reply->type = 109; // LPGP_LWPTTLFULLSTATE
+    std::shared_ptr<LWPTTLDYNAMICSTATE> reply(new LWPTTLDYNAMICSTATE);
+    memset(reply.get(), 0, sizeof(LWPTTLDYNAMICSTATE));
+    reply->type = 109; // LPGP_LWPTTLDYNAMICSTATE
     size_t reply_obj_index = 0;
     for (sea_object const& v : sop_list) {
-        v.fill_packet(reply->obj[reply_obj_index]);
+        auto& o = reply->obj[reply_obj_index];
+        v.fill_packet(o);
         auto it = route_map_.find(v.get_id());
         if (it != route_map_.end() && it->second) {
-            reply->obj[reply_obj_index].route_left = it->second->get_left();
+            o.route_param = it->second->get_param();
+            o.route_speed = 1.0f;
+            o.route_reversed = it->second->get_reversed() ? 1 : 0;
         } else {
-            reply->obj[reply_obj_index].route_left = 0;
+            o.route_param = 0;
+            o.route_speed = 0;
+            o.route_reversed = 0;
         }
         reply_obj_index++;
         if (reply_obj_index >= boost::size(reply->obj)) {
@@ -106,7 +110,7 @@ void udp_server::send_full_state(float lng, float lat, float ex_lng, float ex_la
     reply->count = static_cast<int>(reply_obj_index);
     LOGIx("Querying (%1%,%2%) extent (%3%,%4%) => %5% hit(s).", lng, lat, ex_lng, ex_lat, reply_obj_index);
     char compressed[1500];
-    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLFULLSTATE), static_cast<int>(boost::size(compressed)));
+    int compressed_size = LZ4_compress_default((char*)reply.get(), compressed, sizeof(LWPTTLDYNAMICSTATE), static_cast<int>(boost::size(compressed)));
     if (compressed_size > 0) {
         socket_.async_send_to(boost::asio::buffer(compressed, compressed_size),
                               remote_endpoint_,
@@ -505,7 +509,7 @@ void udp_server::handle_receive(const boost::system::error_code& error, std::siz
             LOGIx("PING received.");
             auto p = reinterpret_cast<LWPTTLPING*>(recv_buffer_.data());
             // ships (vessels)
-            send_full_state(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
+            send_dynamic_state(p->lng, p->lat, p->ex_lng, p->ex_lat, p->view_scale);
             // area titles
             send_seaarea(p->lng, p->lat);
             if (p->track_object_id || p->track_object_ship_id) {

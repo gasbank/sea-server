@@ -13,9 +13,10 @@ route::route(const std::vector<xy32>& waypoints, int seaport1_id, int seaport2_i
     , velocity(0)
     , param(0)
     , seaport1_id(seaport1_id)
-    , seaport2_id(seaport2_id) {
-    if (waypoints.size() == 0) {
-        LOGE("route created with empty waypoints...");
+    , seaport2_id(seaport2_id)
+    , reversed(false) {
+    if (waypoints.size() < 2) {
+        LOGE("route created with less than two waypoints...");
     } else {
         float dist = 0;
         accum_distance.push_back(dist);
@@ -72,7 +73,7 @@ float route::get_left() const {
 void route::reverse() {
     waypoints_spinlock.lock();
     std::reverse(waypoints.begin(), waypoints.end());
-    waypoints_spinlock.unlock();
+    reversed = !reversed;
     auto total_length = *accum_distance.rbegin();
     for (size_t i = 0; i < accum_distance.size(); i++) {
         accum_distance[i] = total_length - accum_distance[i];
@@ -80,6 +81,7 @@ void route::reverse() {
     std::reverse(accum_distance.begin(), accum_distance.end());
     param = total_length - param;
     std::swap(seaport1_id, seaport2_id);
+    waypoints_spinlock.unlock();
 }
 
 std::vector<xy32> route::clone_waypoints() const {
